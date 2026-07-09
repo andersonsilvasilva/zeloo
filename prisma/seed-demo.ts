@@ -45,6 +45,23 @@ const CLIENTS: ClientSeed[] = [
   { name: "Fernando Castro Monteiro", phone: "(11) 92222-0015", birthDate: new Date("1986-11-29") },
 ];
 
+interface ServiceSeed {
+  name: string;
+  slug: string;
+  price: number;
+  durationMinutes: number;
+  category: string;
+}
+
+const SERVICES: ServiceSeed[] = [
+  { name: "Corte Masculino", slug: "corte-masculino", price: 45, durationMinutes: 30, category: "Cabelo" },
+  { name: "Barba", slug: "barba", price: 30, durationMinutes: 30, category: "Barba" },
+  { name: "Corte + Barba", slug: "corte-barba", price: 70, durationMinutes: 45, category: "Combo" },
+  { name: "Sobrancelha", slug: "sobrancelha", price: 15, durationMinutes: 10, category: "Estética" },
+  { name: "Pézinho", slug: "pezinho", price: 20, durationMinutes: 15, category: "Cabelo" },
+  { name: "Platinado", slug: "platinado", price: 150, durationMinutes: 90, category: "Coloração" },
+];
+
 const ATTENDANTS = [
   { name: "Juliana Ferreira", email: "juliana.ferreira@barbershop.local" },
   { name: "Camila Santos", email: "camila.santos@barbershop.local" },
@@ -98,6 +115,22 @@ async function main() {
         commissionPercentage: b.commissionPercentage,
         hiredAt: new Date(),
         workingHours: WORKING_HOURS,
+      },
+    });
+  }
+
+  console.log("Seeding serviços...");
+  for (const s of SERVICES) {
+    await prisma.service.upsert({
+      where: { slug: s.slug },
+      update: {},
+      create: {
+        name: s.name,
+        slug: s.slug,
+        price: s.price,
+        durationMinutes: s.durationMinutes,
+        category: s.category,
+        status: "ACTIVE",
       },
     });
   }
