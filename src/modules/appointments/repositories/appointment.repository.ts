@@ -119,6 +119,11 @@ export class AppointmentRepository {
     });
   }
 
+  /** Barbeiro vinculado ao usuário logado, se houver — usado para restringir a própria agenda. */
+  async findBarberIdByUserId(userId: string): Promise<{ id: string } | null> {
+    return this.db.barber.findUnique({ where: { userId }, select: { id: true } });
+  }
+
   async findBarberById(barberId: string) {
     return this.db.barber.findUnique({
       where: { id: barberId },

@@ -6,11 +6,13 @@ import { NAV_ITEMS } from "@/components/shared/nav-items";
 import { getDashboardMetricsAction } from "@/modules/reports/actions/get-dashboard-metrics.action";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 import { getClientBirthdaysAction } from "@/modules/clients/actions/get-client-birthdays.action";
+import { listTodayAppointmentsAction } from "@/modules/appointments/actions/list-today-appointments.action";
 import { StatCard } from "@/modules/reports/components/stat-card";
 import { RevenueLineChart } from "@/modules/reports/components/revenue-line-chart";
 import { ServicePieChart } from "@/modules/reports/components/service-pie-chart";
 import { BarberBarChart } from "@/modules/reports/components/barber-bar-chart";
 import { BirthdaysBox } from "@/modules/clients/components/birthdays-box";
+import { TodayScheduleBox } from "@/modules/appointments/components/today-schedule-box";
 import { formatCurrency, formatCompactNumber } from "@/lib/utils/format";
 
 export default async function DashboardPage() {
@@ -22,12 +24,16 @@ export default async function DashboardPage() {
     return <WelcomeFallback userName={userName} />;
   }
 
-  const canViewClients = await hasPermission(PERMISSIONS.clients.view);
+  const [canViewClients, canViewAppointments] = await Promise.all([
+    hasPermission(PERMISSIONS.clients.view),
+    hasPermission(PERMISSIONS.appointments.view),
+  ]);
 
-  const [metrics, settings, birthdays] = await Promise.all([
+  const [metrics, settings, birthdays, todayAppointments] = await Promise.all([
     getDashboardMetricsAction(),
     getGeneralSettingsAction(),
     canViewClients ? getClientBirthdaysAction() : Promise.resolve(null),
+    canViewAppointments ? listTodayAppointmentsAction() : Promise.resolve(null),
   ]);
 
   return (
@@ -46,6 +52,8 @@ export default async function DashboardPage() {
           <p className="text-sm text-text-secondary">Visão geral do desempenho da barbearia.</p>
         </div>
       </div>
+
+      {todayAppointments && <TodayScheduleBox appointments={todayAppointments} />}
 
       {birthdays && <BirthdaysBox data={birthdays} />}
 
@@ -131,11 +139,15 @@ export default async function DashboardPage() {
 async function WelcomeFallback({ userName }: { userName: string }) {
   const permissions = await getSessionPermissions();
   const canViewClients = permissions.has(PERMISSIONS.clients.view);
+  const canViewAppointments = permissions.has(PERMISSIONS.appointments.view);
   const quickLinks = NAV_ITEMS.filter(
     (item) => item.href !== "/" && (!item.permission || permissions.has(item.permission)),
   );
 
-  const birthdays = canViewClients ? await getClientBirthdaysAction() : null;
+  const [birthdays, todayAppointments] = await Promise.all([
+    canViewClients ? getClientBirthdaysAction() : Promise.resolve(null),
+    canViewAppointments ? listTodayAppointmentsAction() : Promise.resolve(null),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -143,6 +155,8 @@ async function WelcomeFallback({ userName }: { userName: string }) {
         <h1 className="text-2xl font-semibold text-text">Olá, {userName}</h1>
         <p className="text-sm text-text-secondary">Bem-vindo ao painel da Barbershop SaaS.</p>
       </div>
+
+      {todayAppointments && <TodayScheduleBox appointments={todayAppointments} />}
 
       {birthdays && <BirthdaysBox data={birthdays} />}
 

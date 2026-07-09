@@ -1,8 +1,10 @@
+import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import {
   AppointmentRepository,
   type AppointmentWithRelations,
 } from "@/modules/appointments/repositories/appointment.repository";
+import { parseDateOnly } from "@/modules/appointments/utils/date-only";
 import type {
   CreateAppointmentInput,
   RescheduleAppointmentInput,
@@ -173,6 +175,22 @@ export class AppointmentService {
     const repo = new AppointmentRepository();
     const appointments = await repo.list(filters);
     return appointments.map((a) => this.toListItem(a));
+  }
+
+  /**
+   * Agenda do dia para o box "próximos atendimentos" do dashboard — só os
+   * status ainda ativos (exclui concluídos/cancelados/não-comparecimento).
+   * Se o usuário logado for um barbeiro, mostra só a própria agenda.
+   */
+  async listToday(userId: string): Promise<AppointmentListItem[]> {
+    const repo = new AppointmentRepository();
+    const barber = await repo.findBarberIdByUserId(userId);
+    const today = parseDateOnly(format(new Date(), "yyyy-MM-dd"));
+
+    const appointments = await repo.list({ dateFrom: today, dateTo: today, barberId: barber?.id });
+    return appointments
+      .filter((a) => ["PENDING", "CONFIRMED", "IN_PROGRESS"].includes(a.status))
+      .map((a) => this.toListItem(a));
   }
 
   async getFormOptions(): Promise<AppointmentFormOptions> {
