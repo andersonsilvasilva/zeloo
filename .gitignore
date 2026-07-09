@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env
+public/uploads/
+*.log
+.DS_Store
+*.tsbuildinfo
+
+# repositório git não relacionado a este projeto, apenas coexistindo na pasta
+/barbearia/

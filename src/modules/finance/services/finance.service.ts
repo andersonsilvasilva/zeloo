@@ -1,0 +1,204 @@
+import { prisma } from "@/lib/prisma";
+import {
+  FinanceRepository,
+  type CashRegisterWithRelations,
+  type CashbookEntryWithRelations,
+  type PayableAppointment,
+} from "@/modules/finance/repositories/finance.repository";
+import type {
+  OpenCashRegisterInput,
+  CloseCashRegisterInput,
+  CreateCashbookEntryInput,
+  RegisterPaymentInput,
+  ListCashbookEntriesInput,
+} from "@/modules/finance/schemas/finance.schema";
+import type {
+  CashRegisterClosingSummary,
+  CashRegisterInfo,
+  CashbookEntryItem,
+  PayableAppointmentOption,
+} from "@/modules/finance/types/finance.types";
+
+export class CashRegisterAlreadyOpenError extends Error {
+  constructor() {
+    super("Já existe um caixa aberto.");
+    this.name = "CashRegisterAlreadyOpenError";
+  }
+}
+
+export class NoOpenCashRegisterError extends Error {
+  constructor() {
+    super("Abra o caixa antes de registrar lançamentos ou pagamentos.");
+    this.name = "NoOpenCashRegisterError";
+  }
+}
+
+export class AppointmentNotFoundError extends Error {
+  constructor() {
+    super("Agendamento não encontrado.");
+    this.name = "AppointmentNotFoundError";
+  }
+}
+
+export class AppointmentNotPayableError extends Error {
+  constructor() {
+    super("Este agendamento não está concluído ou já possui pagamento registrado.");
+    this.name = "AppointmentNotPayableError";
+  }
+}
+
+export class FinanceService {
+  async getCurrentRegister(): Promise<CashRegisterInfo | null> {
+    const repo = new FinanceRepository();
+    const register = await repo.findOpenRegister();
+    return register ? this.toRegisterInfo(register) : null;
+  }
+
+  async openRegister(input: OpenCashRegisterInput, userId: string): Promise<CashRegisterInfo> {
+    const repo = new FinanceRepository();
+    const existing = await repo.findOpenRegister();
+    if (existing) throw new CashRegisterAlreadyOpenError();
+
+    const register = await repo.createRegister({
+      openedBy: { connect: { id: userId } },
+      openedAt: new Date(),
+      openingBalance: input.openingBalance,
+      status: "OPEN",
+    });
+    return this.toRegisterInfo(register);
+  }
+
+  async closeRegister(input: CloseCashRegisterInput, userId: string): Promise<CashRegisterClosingSummary> {
+    return prisma.$transaction(async (tx) => {
+      const repo = new FinanceRepository(tx);
+      const register = await repo.findOpenRegister();
+      if (!register) throw new NoOpenCashRegisterError();
+
+      const [creditSum, debitSum] = await Promise.all([
+        repo.sumEntriesSince(register.openedAt, "CREDIT"),
+        repo.sumEntriesSince(register.openedAt, "DEBIT"),
+      ]);
+
+      const expectedBalance = register.openingBalance.toNumber() + creditSum - debitSum;
+      const difference = input.actualBalance - expectedBalance;
+
+      await repo.createClosing({
+        cashRegister: { connect: { id: register.id } },
+        closedBy: { connect: { id: userId } },
+        closedAt: new Date(),
+        expectedBalance,
+        actualBalance: input.actualBalance,
+        difference,
+        notes: input.notes || null,
+      });
+      await repo.closeRegister(register.id);
+
+      return { expectedBalance, actualBalance: input.actualBalance, difference };
+    });
+  }
+
+  async listCashbookEntries(filters: ListCashbookEntriesInput): Promise<CashbookEntryItem[]> {
+    const repo = new FinanceRepository();
+    const entries = await repo.listCashbookEntries(filters);
+    return entries.map((e) => this.toCashbookItem(e));
+  }
+
+  async createCashbookEntry(input: CreateCashbookEntryInput, userId: string): Promise<CashbookEntryItem> {
+    const repo = new FinanceRepository();
+    const register = await repo.findOpenRegister();
+    if (!register) throw new NoOpenCashRegisterError();
+
+    const entry = await repo.createCashbookEntry({
+      type: input.type,
+      description: input.description,
+      amount: input.amount,
+      category: input.category || null,
+      paymentMethod: input.paymentMethod,
+      transactionDate: input.transactionDate,
+      notes: input.notes || null,
+      createdBy: { connect: { id: userId } },
+    });
+    return this.toCashbookItem(entry);
+  }
+
+  async listPayableAppointments(): Promise<PayableAppointmentOption[]> {
+    const repo = new FinanceRepository();
+    const appointments = await repo.findPayableAppointments();
+    return appointments.map((a) => this.toPayableOption(a));
+  }
+
+  async registerPayment(input: RegisterPaymentInput, userId: string) {
+    return prisma.$transaction(async (tx) => {
+      const repo = new FinanceRepository(tx);
+
+      const register = await repo.findOpenRegister();
+      if (!register) throw new NoOpenCashRegisterError();
+
+      const appointment = await repo.findAppointmentById(input.appointmentId);
+      if (!appointment) throw new AppointmentNotFoundError();
+
+      const existingPayments = await repo.countPaymentsForAppointment(input.appointmentId);
+      if (appointment.status !== "COMPLETED" || existingPayments > 0) {
+        throw new AppointmentNotPayableError();
+      }
+
+      const now = new Date();
+      const payment = await repo.createPayment({
+        appointment: { connect: { id: input.appointmentId } },
+        amount: input.amount,
+        paymentMethod: input.paymentMethod,
+        status: "PAID",
+        paidAt: now,
+        receivedBy: { connect: { id: userId } },
+      });
+
+      const entry = await repo.createCashbookEntry({
+        type: "CREDIT",
+        description: `Pagamento — ${appointment.client.name}`,
+        amount: input.amount,
+        paymentMethod: input.paymentMethod,
+        appointmentId: input.appointmentId,
+        payment: { connect: { id: payment.id } },
+        transactionDate: now,
+        createdBy: { connect: { id: userId } },
+      });
+
+      return this.toCashbookItem(entry);
+    });
+  }
+
+  private toRegisterInfo(register: CashRegisterWithRelations): CashRegisterInfo {
+    return {
+      id: register.id,
+      openedAt: register.openedAt,
+      openingBalance: register.openingBalance.toNumber(),
+      openedBy: register.openedBy,
+    };
+  }
+
+  private toCashbookItem(entry: CashbookEntryWithRelations): CashbookEntryItem {
+    return {
+      id: entry.id,
+      type: entry.type,
+      description: entry.description,
+      amount: entry.amount.toNumber(),
+      category: entry.category,
+      paymentMethod: entry.paymentMethod,
+      transactionDate: entry.transactionDate,
+      createdBy: entry.createdBy,
+      notes: entry.notes,
+    };
+  }
+
+  private toPayableOption(appointment: PayableAppointment): PayableAppointmentOption {
+    return {
+      id: appointment.id,
+      clientName: appointment.client.name,
+      barberName: appointment.barber.professionalName,
+      servicesLabel: appointment.services.map((s) => s.service.name).join(", "),
+      totalPrice: appointment.services.reduce((sum, s) => sum + s.price.toNumber(), 0),
+      appointmentDate: appointment.appointmentDate,
+      startTime: appointment.startTime,
+    };
+  }
+}

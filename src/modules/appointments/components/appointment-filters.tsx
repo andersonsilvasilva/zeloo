@@ -1,0 +1,78 @@
+"use client";
+
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { appointmentStatusValues } from "@/modules/appointments/schemas/appointment.schema";
+import type { BarberOption } from "@/modules/appointments/types/appointment.types";
+
+const STATUS_LABELS: Record<(typeof appointmentStatusValues)[number], string> = {
+  PENDING: "Pendente",
+  CONFIRMED: "Confirmado",
+  IN_PROGRESS: "Em atendimento",
+  COMPLETED: "Concluído",
+  CANCELLED: "Cancelado",
+  NO_SHOW: "Não compareceu",
+};
+
+export interface AppointmentFiltersProps {
+  date: string;
+  barberId: string;
+  status: string;
+  barbers: BarberOption[];
+}
+
+export function AppointmentFilters({ date, barberId, status, barbers }: AppointmentFiltersProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  function updateParam(key: string, value: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set(key, value);
+    } else {
+      params.delete(key);
+    }
+    router.push(`${pathname}?${params.toString()}`);
+  }
+
+  return (
+    <div className="flex flex-wrap items-end gap-3">
+      <div className="space-y-1">
+        <Label htmlFor="filter-date">Data</Label>
+        <input
+          id="filter-date"
+          type="date"
+          value={date}
+          onChange={(e) => updateParam("date", e.target.value)}
+          className="h-10 rounded-lg border border-border bg-card px-3 text-sm text-text focus-gold"
+        />
+      </div>
+
+      <div className="w-48 space-y-1">
+        <Label htmlFor="filter-barber">Barbeiro</Label>
+        <Select id="filter-barber" value={barberId} onChange={(e) => updateParam("barberId", e.target.value)}>
+          <option value="">Todos os barbeiros</option>
+          {barbers.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.professionalName}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <div className="w-44 space-y-1">
+        <Label htmlFor="filter-status">Status</Label>
+        <Select id="filter-status" value={status} onChange={(e) => updateParam("status", e.target.value)}>
+          <option value="">Todos os status</option>
+          {appointmentStatusValues.map((s) => (
+            <option key={s} value={s}>
+              {STATUS_LABELS[s]}
+            </option>
+          ))}
+        </Select>
+      </div>
+    </div>
+  );
+}
