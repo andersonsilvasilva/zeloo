@@ -144,7 +144,8 @@ async function WelcomeFallback({ userName }: { userName: string }) {
     (item) => item.href !== "/" && (!item.permission || permissions.has(item.permission)),
   );
 
-  const [birthdays, todayAppointments] = await Promise.all([
+  const [settings, birthdays, todayAppointments] = await Promise.all([
+    getGeneralSettingsAction(),
     canViewClients ? getClientBirthdaysAction() : Promise.resolve(null),
     canViewAppointments ? listTodayAppointmentsAction() : Promise.resolve(null),
   ]);
@@ -153,7 +154,7 @@ async function WelcomeFallback({ userName }: { userName: string }) {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-text">Olá, {userName}</h1>
-        <p className="text-sm text-text-secondary">Bem-vindo ao painel da Barbershop SaaS.</p>
+        <p className="text-sm text-text-secondary">Bem-vindo ao painel da {settings.name}.</p>
       </div>
 
       {todayAppointments && <TodayScheduleBox appointments={todayAppointments} />}
