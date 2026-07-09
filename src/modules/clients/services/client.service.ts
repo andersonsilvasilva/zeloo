@@ -161,6 +161,11 @@ export class ClientService {
    * Classifica os clientes com data de nascimento em hoje / esta semana / este
    * mês, cada um aparecendo só no balde mais específico (evita repetição).
    * "Semana" usa segunda a domingo (mesma convenção do dashboard).
+   *
+   * `birthDate` é gravado como meia-noite UTC da data escolhida (mesmo padrão
+   * do `input[type=date].valueAsDate`) — por isso lemos mês/dia com os
+   * getters UTC, não locais, senão a data desloca um dia em fusos != UTC
+   * (mesma armadilha documentada em appointments/utils/date-only.ts).
    */
   async getBirthdays(): Promise<ClientBirthdays> {
     const repo = new ClientRepository();
@@ -176,9 +181,9 @@ export class ClientService {
       const birthDate = client.birthDate;
       if (!birthDate) continue;
 
-      const month = birthDate.getMonth();
-      const day = birthDate.getDate();
-      const birthYear = birthDate.getFullYear();
+      const month = birthDate.getUTCMonth();
+      const day = birthDate.getUTCDate();
+      const birthYear = birthDate.getUTCFullYear();
 
       const isToday = month === today.getMonth() && day === today.getDate();
       if (isToday) {
@@ -199,7 +204,7 @@ export class ClientService {
       }
     }
 
-    const byDay = (a: BirthdayClient, b: BirthdayClient) => a.birthDate.getDate() - b.birthDate.getDate();
+    const byDay = (a: BirthdayClient, b: BirthdayClient) => a.birthDate.getUTCDate() - b.birthDate.getUTCDate();
     result.thisWeek.sort(byDay);
     result.thisMonth.sort(byDay);
 
@@ -220,6 +225,8 @@ export class ClientService {
     client: { id: string; name: string; phone: string | null; whatsapp: string | null; birthDate: Date },
     turningAge: number,
   ): BirthdayClient {
+    const day = String(client.birthDate.getUTCDate()).padStart(2, "0");
+    const month = String(client.birthDate.getUTCMonth() + 1).padStart(2, "0");
     return {
       id: client.id,
       name: client.name,
@@ -227,6 +234,7 @@ export class ClientService {
       whatsapp: client.whatsapp,
       birthDate: client.birthDate,
       turningAge,
+      birthdayLabel: `${day}/${month}`,
     };
   }
 

@@ -12,7 +12,10 @@ function BirthdayColumn({ title, clients, emptyLabel }: { title: string; clients
           {clients.map((client) => (
             <li key={client.id} className="text-sm">
               <p className="text-text">
-                {client.name} <span className="text-text-secondary">— {client.turningAge} anos</span>
+                {client.name}{" "}
+                <span className="text-text-secondary">
+                  — {client.birthdayLabel} ({client.turningAge} anos)
+                </span>
               </p>
               {(client.whatsapp || client.phone) && (
                 <p className="text-xs text-text-secondary">{client.whatsapp || client.phone}</p>

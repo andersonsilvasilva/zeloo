@@ -37,6 +37,8 @@ export interface BirthdayClient {
   birthDate: Date;
   /** Idade que o cliente completa nessa ocorrência do aniversário. */
   turningAge: number;
+  /** Dia/mês formatado ("dd/MM") a partir dos componentes UTC de birthDate — ver nota em client.service.ts. */
+  birthdayLabel: string;
 }
 
 export interface ClientBirthdays {
