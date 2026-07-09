@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { ClipboardList } from "lucide-react";
 import { hasPermission } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { ComingSoon } from "@/components/shared/coming-soon";
@@ -50,12 +52,21 @@ export default async function FinanceiroPage({
           <h1 className="text-2xl font-semibold text-text">Financeiro</h1>
           <p className="text-sm text-text-secondary">Livro-caixa, pagamentos e abertura/fechamento de caixa.</p>
         </div>
-        {canCreate && (
-          <div className="flex flex-wrap gap-2">
-            <NewCashbookEntryDialog />
-            <RegisterPaymentDialog appointments={payableAppointments} />
-          </div>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/financeiro/balancete"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-text transition-colors hover:border-primary focus-gold"
+          >
+            <ClipboardList size={16} />
+            Ver balancete
+          </Link>
+          {canCreate && (
+            <>
+              <NewCashbookEntryDialog />
+              <RegisterPaymentDialog appointments={payableAppointments} />
+            </>
+          )}
+        </div>
       </div>
 
       <CashRegisterPanel initialRegister={register} canCreate={canCreate} canUpdate={canUpdate} />

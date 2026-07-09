@@ -34,3 +34,31 @@ body {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
+
+/*
+ * Impressão de relatórios — o tema padrão é escuro (fundo quase preto,
+ * texto branco), o que desperdiça tinta e fica ilegível em papel/PDF.
+ * Força fundo branco e texto escuro só no modo impressão; o chrome do
+ * app (sidebar, header, footer, filtros) é ocultado via classe `print:hidden`
+ * diretamente nos componentes.
+ */
+@media print {
+  body,
+  .bg-background,
+  .bg-background-secondary,
+  .bg-card {
+    background: #ffffff !important;
+  }
+  .text-text {
+    color: #111111 !important;
+  }
+  .text-text-secondary {
+    color: #555555 !important;
+  }
+  .border-border {
+    border-color: #cccccc !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+}

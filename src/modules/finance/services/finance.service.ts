@@ -1,3 +1,4 @@
+import { endOfDay, startOfDay } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import {
   FinanceRepository,
@@ -11,12 +12,15 @@ import type {
   CreateCashbookEntryInput,
   RegisterPaymentInput,
   ListCashbookEntriesInput,
+  BalanceteFiltersInput,
 } from "@/modules/finance/schemas/finance.schema";
 import type {
   CashRegisterClosingSummary,
   CashRegisterInfo,
   CashbookEntryItem,
   PayableAppointmentOption,
+  BalanceteRow,
+  BalanceteSummary,
 } from "@/modules/finance/types/finance.types";
 
 export class CashRegisterAlreadyOpenError extends Error {
@@ -165,6 +169,36 @@ export class FinanceService {
 
       return this.toCashbookItem(entry);
     });
+  }
+
+  /** Balancete débito/crédito: agrupa lançamentos por categoria no período, com totais gerais. */
+  async getBalancete(filters: BalanceteFiltersInput): Promise<BalanceteSummary> {
+    const repo = new FinanceRepository();
+    const grouped = await repo.sumEntriesByCategoryInRange(startOfDay(filters.dateFrom), endOfDay(filters.dateTo));
+
+    const rowMap = new Map<string, BalanceteRow>();
+    for (const g of grouped) {
+      const category = g.category || "Sem categoria";
+      const row = rowMap.get(category) ?? { category, credit: 0, debit: 0, balance: 0 };
+      const amount = g._sum.amount?.toNumber() ?? 0;
+      if (g.type === "CREDIT") row.credit += amount;
+      else row.debit += amount;
+      row.balance = row.credit - row.debit;
+      rowMap.set(category, row);
+    }
+
+    const rows = [...rowMap.values()].sort((a, b) => b.credit + b.debit - (a.credit + a.debit));
+    const totalCredit = rows.reduce((sum, r) => sum + r.credit, 0);
+    const totalDebit = rows.reduce((sum, r) => sum + r.debit, 0);
+
+    return {
+      dateFrom: filters.dateFrom,
+      dateTo: filters.dateTo,
+      rows,
+      totalCredit,
+      totalDebit,
+      totalBalance: totalCredit - totalDebit,
+    };
   }
 
   private toRegisterInfo(register: CashRegisterWithRelations): CashRegisterInfo {

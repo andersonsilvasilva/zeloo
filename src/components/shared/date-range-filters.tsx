@@ -5,12 +5,12 @@ import { format, subDays, startOfMonth } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-export interface ReportFiltersProps {
+export interface DateRangeFiltersProps {
   dateFrom: string;
   dateTo: string;
 }
 
-export function ReportFilters({ dateFrom, dateTo }: ReportFiltersProps) {
+export function DateRangeFilters({ dateFrom, dateTo }: DateRangeFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -33,11 +33,11 @@ export function ReportFilters({ dateFrom, dateTo }: ReportFiltersProps) {
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
+    <div className="flex flex-wrap items-end gap-3 print:hidden">
       <div className="space-y-1">
-        <Label htmlFor="report-date-from">De</Label>
+        <Label htmlFor="date-range-from">De</Label>
         <input
-          id="report-date-from"
+          id="date-range-from"
           type="date"
           value={dateFrom}
           onChange={(e) => updateParams({ dateFrom: e.target.value, dateTo })}
@@ -45,9 +45,9 @@ export function ReportFilters({ dateFrom, dateTo }: ReportFiltersProps) {
         />
       </div>
       <div className="space-y-1">
-        <Label htmlFor="report-date-to">Até</Label>
+        <Label htmlFor="date-range-to">Até</Label>
         <input
-          id="report-date-to"
+          id="date-range-to"
           type="date"
           value={dateTo}
           onChange={(e) => updateParams({ dateFrom, dateTo: e.target.value })}

@@ -2,12 +2,15 @@ import { format } from "date-fns";
 import { hasPermission } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { ComingSoon } from "@/components/shared/coming-soon";
+import { PrintButton } from "@/components/shared/print-button";
+import { PrintHeader } from "@/components/shared/print-header";
+import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 import { getPeriodReportAction } from "@/modules/reports/actions/get-period-report.action";
 import { StatCard } from "@/modules/reports/components/stat-card";
 import { RevenueLineChart } from "@/modules/reports/components/revenue-line-chart";
 import { ServicePieChart } from "@/modules/reports/components/service-pie-chart";
 import { BarberBarChart } from "@/modules/reports/components/barber-bar-chart";
-import { ReportFilters } from "@/modules/reports/components/report-filters";
+import { DateRangeFilters } from "@/components/shared/date-range-filters";
 import { AppointmentStatusSummary } from "@/modules/reports/components/appointment-status-summary";
 import { PaymentMethodList } from "@/modules/reports/components/payment-method-list";
 import { TopClientsList } from "@/modules/reports/components/top-clients-list";
@@ -32,14 +35,26 @@ export default async function RelatoriosPage({
   const dateFrom = searchParams.dateFrom || thirtyDaysAgo;
   const dateTo = searchParams.dateTo || today;
 
-  const report = await getPeriodReportAction({
-    dateFrom: parseLocalDate(dateFrom),
-    dateTo: parseLocalDate(dateTo),
-  });
+  const [report, settings] = await Promise.all([
+    getPeriodReportAction({
+      dateFrom: parseLocalDate(dateFrom),
+      dateTo: parseLocalDate(dateTo),
+    }),
+    getGeneralSettingsAction(),
+  ]);
+
+  const periodLabel = `Período: ${format(parseLocalDate(dateFrom), "dd/MM/yyyy")} a ${format(parseLocalDate(dateTo), "dd/MM/yyyy")}`;
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <PrintHeader
+        logoUrl={settings.logoUrl}
+        businessName={settings.name}
+        title="Relatório de desempenho"
+        subtitle={periodLabel}
+      />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-semibold text-text">Relatórios</h1>
           <p className="text-sm text-text-secondary">
@@ -48,9 +63,10 @@ export default async function RelatoriosPage({
               : "Indicadores detalhados por período customizável."}
           </p>
         </div>
+        <PrintButton />
       </div>
 
-      <ReportFilters dateFrom={dateFrom} dateTo={dateTo} />
+      <DateRangeFilters dateFrom={dateFrom} dateTo={dateTo} />
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Faturamento no período" value={formatCurrency(report.totalRevenue)} />

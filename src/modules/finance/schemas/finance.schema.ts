@@ -48,3 +48,10 @@ export const listCashbookEntriesSchema = z.object({
 });
 
 export type ListCashbookEntriesInput = z.infer<typeof listCashbookEntriesSchema>;
+
+export const balanceteFiltersSchema = z.object({
+  dateFrom: z.coerce.date(),
+  dateTo: z.coerce.date(),
+});
+
+export type BalanceteFiltersInput = z.infer<typeof balanceteFiltersSchema>;

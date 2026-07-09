@@ -73,6 +73,15 @@ export class FinanceRepository {
     return this.db.cashbookEntry.create({ data, include: cashbookInclude });
   }
 
+  /** Soma por categoria e tipo (CREDIT/DEBIT) dentro de um intervalo de datas — base do balancete. */
+  async sumEntriesByCategoryInRange(dateFrom: Date, dateTo: Date) {
+    return this.db.cashbookEntry.groupBy({
+      by: ["category", "type"],
+      where: { transactionDate: { gte: dateFrom, lte: dateTo } },
+      _sum: { amount: true },
+    });
+  }
+
   async findPayableAppointments(): Promise<PayableAppointment[]> {
     return this.db.appointment.findMany({
       where: { status: "COMPLETED", payments: { none: {} } },

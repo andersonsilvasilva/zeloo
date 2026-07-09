@@ -28,6 +28,22 @@ export interface CashbookEntryItem {
   notes: string | null;
 }
 
+export interface BalanceteRow {
+  category: string;
+  credit: number;
+  debit: number;
+  balance: number;
+}
+
+export interface BalanceteSummary {
+  dateFrom: Date;
+  dateTo: Date;
+  rows: BalanceteRow[];
+  totalCredit: number;
+  totalDebit: number;
+  totalBalance: number;
+}
+
 export interface PayableAppointmentOption {
   id: string;
   clientName: string;

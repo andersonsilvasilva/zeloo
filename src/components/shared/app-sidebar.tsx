@@ -53,7 +53,7 @@ export function AppSidebar({ navItems, open, onNavigate, logoUrl }: AppSidebarPr
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64 shrink-0 border-r border-border bg-card transition-transform md:sticky md:top-0 md:h-screen md:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 w-64 shrink-0 border-r border-border bg-card transition-transform print:hidden md:sticky md:top-0 md:h-screen md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
