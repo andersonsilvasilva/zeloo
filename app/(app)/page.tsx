@@ -5,10 +5,12 @@ import { PERMISSIONS } from "@/lib/auth/permissions";
 import { NAV_ITEMS } from "@/components/shared/nav-items";
 import { getDashboardMetricsAction } from "@/modules/reports/actions/get-dashboard-metrics.action";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
+import { getClientBirthdaysAction } from "@/modules/clients/actions/get-client-birthdays.action";
 import { StatCard } from "@/modules/reports/components/stat-card";
 import { RevenueLineChart } from "@/modules/reports/components/revenue-line-chart";
 import { ServicePieChart } from "@/modules/reports/components/service-pie-chart";
 import { BarberBarChart } from "@/modules/reports/components/barber-bar-chart";
+import { BirthdaysBox } from "@/modules/clients/components/birthdays-box";
 import { formatCurrency, formatCompactNumber } from "@/lib/utils/format";
 
 export default async function DashboardPage() {
@@ -20,7 +22,13 @@ export default async function DashboardPage() {
     return <WelcomeFallback userName={userName} />;
   }
 
-  const [metrics, settings] = await Promise.all([getDashboardMetricsAction(), getGeneralSettingsAction()]);
+  const canViewClients = await hasPermission(PERMISSIONS.clients.view);
+
+  const [metrics, settings, birthdays] = await Promise.all([
+    getDashboardMetricsAction(),
+    getGeneralSettingsAction(),
+    canViewClients ? getClientBirthdaysAction() : Promise.resolve(null),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -38,6 +46,8 @@ export default async function DashboardPage() {
           <p className="text-sm text-text-secondary">Visão geral do desempenho da barbearia.</p>
         </div>
       </div>
+
+      {birthdays && <BirthdaysBox data={birthdays} />}
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium uppercase tracking-wide text-text-secondary">
@@ -120,9 +130,12 @@ export default async function DashboardPage() {
 
 async function WelcomeFallback({ userName }: { userName: string }) {
   const permissions = await getSessionPermissions();
+  const canViewClients = permissions.has(PERMISSIONS.clients.view);
   const quickLinks = NAV_ITEMS.filter(
     (item) => item.href !== "/" && (!item.permission || permissions.has(item.permission)),
   );
+
+  const birthdays = canViewClients ? await getClientBirthdaysAction() : null;
 
   return (
     <div className="space-y-6">
@@ -130,6 +143,8 @@ async function WelcomeFallback({ userName }: { userName: string }) {
         <h1 className="text-2xl font-semibold text-text">Olá, {userName}</h1>
         <p className="text-sm text-text-secondary">Bem-vindo ao painel da Barbershop SaaS.</p>
       </div>
+
+      {birthdays && <BirthdaysBox data={birthdays} />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {quickLinks.map((item) => (

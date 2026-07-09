@@ -28,3 +28,19 @@ export interface ClientDetail extends ClientListItem {
 export interface ClientFormOptions {
   barbers: ClientBarberOption[];
 }
+
+export interface BirthdayClient {
+  id: string;
+  name: string;
+  phone: string | null;
+  whatsapp: string | null;
+  birthDate: Date;
+  /** Idade que o cliente completa nessa ocorrência do aniversário. */
+  turningAge: number;
+}
+
+export interface ClientBirthdays {
+  today: BirthdayClient[];
+  thisWeek: BirthdayClient[];
+  thisMonth: BirthdayClient[];
+}

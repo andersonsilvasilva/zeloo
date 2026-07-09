@@ -1,3 +1,4 @@
+import { endOfWeek, isWithinInterval, startOfDay, startOfWeek } from "date-fns";
 import { getStorageProvider } from "@/lib/storage";
 import { ClientRepository, type ClientWithRelations } from "@/modules/clients/repositories/client.repository";
 import type {
@@ -5,7 +6,13 @@ import type {
   UpdateClientInput,
   ListClientsInput,
 } from "@/modules/clients/schemas/client.schema";
-import type { ClientDetail, ClientFormOptions, ClientListItem } from "@/modules/clients/types/client.types";
+import type {
+  BirthdayClient,
+  ClientBirthdays,
+  ClientDetail,
+  ClientFormOptions,
+  ClientListItem,
+} from "@/modules/clients/types/client.types";
 
 export class ClientNotFoundError extends Error {
   constructor() {
@@ -148,6 +155,79 @@ export class ClientService {
     const repo = new ClientRepository();
     const barbers = await repo.listActiveBarbersForSelect();
     return { barbers };
+  }
+
+  /**
+   * Classifica os clientes com data de nascimento em hoje / esta semana / este
+   * mês, cada um aparecendo só no balde mais específico (evita repetição).
+   * "Semana" usa segunda a domingo (mesma convenção do dashboard).
+   */
+  async getBirthdays(): Promise<ClientBirthdays> {
+    const repo = new ClientRepository();
+    const clients = await repo.listWithBirthDate();
+
+    const today = startOfDay(new Date());
+    const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
+
+    const result: ClientBirthdays = { today: [], thisWeek: [], thisMonth: [] };
+
+    for (const client of clients) {
+      const birthDate = client.birthDate;
+      if (!birthDate) continue;
+
+      const month = birthDate.getMonth();
+      const day = birthDate.getDate();
+      const birthYear = birthDate.getFullYear();
+
+      const isToday = month === today.getMonth() && day === today.getDate();
+      if (isToday) {
+        result.today.push(this.toBirthdayClient({ ...client, birthDate }, today.getFullYear() - birthYear));
+        continue;
+      }
+
+      const weekOccurrence = this.matchOccurrenceInRange(month, day, weekStart, weekEnd);
+      if (weekOccurrence) {
+        result.thisWeek.push(
+          this.toBirthdayClient({ ...client, birthDate }, weekOccurrence.getFullYear() - birthYear),
+        );
+        continue;
+      }
+
+      if (month === today.getMonth()) {
+        result.thisMonth.push(this.toBirthdayClient({ ...client, birthDate }, today.getFullYear() - birthYear));
+      }
+    }
+
+    const byDay = (a: BirthdayClient, b: BirthdayClient) => a.birthDate.getDate() - b.birthDate.getDate();
+    result.thisWeek.sort(byDay);
+    result.thisMonth.sort(byDay);
+
+    return result;
+  }
+
+  /** Testa a ocorrência do dia/mês em cada ano coberto pelo intervalo (cobre a virada dez/jan). */
+  private matchOccurrenceInRange(month: number, day: number, start: Date, end: Date): Date | null {
+    const years = new Set([start.getFullYear(), end.getFullYear()]);
+    for (const year of years) {
+      const candidate = new Date(year, month, day);
+      if (isWithinInterval(candidate, { start, end })) return candidate;
+    }
+    return null;
+  }
+
+  private toBirthdayClient(
+    client: { id: string; name: string; phone: string | null; whatsapp: string | null; birthDate: Date },
+    turningAge: number,
+  ): BirthdayClient {
+    return {
+      id: client.id,
+      name: client.name,
+      phone: client.phone,
+      whatsapp: client.whatsapp,
+      birthDate: client.birthDate,
+      turningAge,
+    };
   }
 
   private toListItem(client: ClientWithRelations): ClientListItem {

@@ -74,4 +74,12 @@ export class ClientRepository {
       orderBy: { professionalName: "asc" },
     });
   }
+
+  /** Todos os clientes ativos com data de nascimento cadastrada — a classificação por dia/semana/mês é feita no service. */
+  async listWithBirthDate() {
+    return this.db.client.findMany({
+      where: { birthDate: { not: null }, status: { in: ["ACTIVE", "VIP"] } },
+      select: { id: true, name: true, phone: true, whatsapp: true, birthDate: true },
+    });
+  }
 }

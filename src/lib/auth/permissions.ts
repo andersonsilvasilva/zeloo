@@ -97,6 +97,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleSlug, PermissionSlug[]> = {
     PERMISSIONS.finance.create,
     PERMISSIONS.finance.update,
     PERMISSIONS.appointments.view,
+    PERMISSIONS.clients.view, // para o box de aniversariantes e contexto do cliente ao receber pagamento
   ],
   CLIENT: [
     PERMISSIONS.appointments.view,
