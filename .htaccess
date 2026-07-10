@@ -1,0 +1,10 @@
+# Config do Passenger para a hospedagem Node.js da Hostinger (conta u357370739).
+# Precisa ficar versionado: o auto-deploy via Git da Hostinger limpa arquivos
+# não rastreados em public_html a cada push, o que já apagou uma cópia
+# criada manualmente por SSH.
+PassengerAppRoot "/home/u357370739/domains/antiquewhite-monkey-653527.hostingersite.com/public_html/app_deploy"
+PassengerBaseURI "/"
+PassengerNodejs "/opt/alt/alt-nodejs20/root/usr/bin/node"
+PassengerAppType node
+PassengerStartupFile server.js
+PassengerAppEnv production
