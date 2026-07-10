@@ -43,6 +43,7 @@ Aplicação web full-stack para gestão operacional, financeira e comercial de u
 - [Deploy em produção](#-deploy-em-produção)
 - [Estrutura de pastas](#-estrutura-de-pastas)
 - [Roadmap](#-roadmap)
+- [Desenvolvedor](#-desenvolvedor)
 - [Licença](#-licença)
 
 ---
@@ -285,6 +286,13 @@ prisma/
 - [ ] Migração de armazenamento local para S3/R2 (interface `StorageProvider` já preparada)
 - [ ] Estratégia multi-tenant (suportar múltiplas barbearias na mesma base — ver anotações de arquitetura no código)
 - [ ] Consolidar `prisma/seed-appointments.ts` (sem script no `package.json`) e `prisma/seed-demo-appointments.ts` (script `prisma:seed:demo:appointments`) — dois scripts com propósito parecido, resultado de iterações diferentes
+
+---
+
+## 👨‍💻 Desenvolvedor
+
+Desenvolvido por **Anderson A. Barros**
+[![GitHub](https://img.shields.io/badge/GitHub-andersonsilvasilva-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/andersonsilvasilva)
 
 ---
 
