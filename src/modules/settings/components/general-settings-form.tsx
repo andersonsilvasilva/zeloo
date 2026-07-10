@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { maskPhone } from "@/lib/utils/format";
 import {
   generalSettingsSchema,
   TIMEZONE_OPTIONS,
@@ -58,13 +59,21 @@ export function GeneralSettingsForm({ initialSettings }: { initialSettings: Gene
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="phone">Telefone</Label>
-          <Input id="phone" placeholder="(11) 3333-4444" {...register("phone")} />
+          <Input
+            id="phone"
+            placeholder="(99)99999-9999"
+            {...register("phone", { onChange: (e) => (e.target.value = maskPhone(e.target.value)) })}
+          />
           {errors.phone && <p className="text-sm text-danger">{errors.phone.message}</p>}
         </div>
 
         <div className="space-y-1">
           <Label htmlFor="whatsapp">WhatsApp</Label>
-          <Input id="whatsapp" placeholder="(11) 99999-8888" {...register("whatsapp")} />
+          <Input
+            id="whatsapp"
+            placeholder="(99)99999-9999"
+            {...register("whatsapp", { onChange: (e) => (e.target.value = maskPhone(e.target.value)) })}
+          />
           {errors.whatsapp && <p className="text-sm text-danger">{errors.whatsapp.message}</p>}
         </div>
       </div>

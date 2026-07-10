@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { maskPhone } from "@/lib/utils/format";
 import {
   createClientSchema,
   clientStatusValues,
@@ -79,11 +80,19 @@ export function ClientForm({ options, mode, clientId, defaultValues, onSuccess }
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="phone">Telefone</Label>
-          <Input id="phone" {...register("phone")} />
+          <Input
+            id="phone"
+            placeholder="(99)99999-9999"
+            {...register("phone", { onChange: (e) => (e.target.value = maskPhone(e.target.value)) })}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="whatsapp">WhatsApp</Label>
-          <Input id="whatsapp" {...register("whatsapp")} />
+          <Input
+            id="whatsapp"
+            placeholder="(99)99999-9999"
+            {...register("whatsapp", { onChange: (e) => (e.target.value = maskPhone(e.target.value)) })}
+          />
         </div>
       </div>
 

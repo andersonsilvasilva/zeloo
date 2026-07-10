@@ -10,6 +10,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { WorkingHoursEditor } from "@/modules/barbers/components/working-hours-editor";
+import { maskPhone } from "@/lib/utils/format";
 import {
   createBarberSchema,
   barberStatusValues,
@@ -105,11 +106,19 @@ export function BarberForm({ options, mode, barberId, defaultValues, onSuccess }
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="phone">Telefone</Label>
-          <Input id="phone" {...register("phone")} />
+          <Input
+            id="phone"
+            placeholder="(99)99999-9999"
+            {...register("phone", { onChange: (e) => (e.target.value = maskPhone(e.target.value)) })}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="whatsapp">WhatsApp</Label>
-          <Input id="whatsapp" {...register("whatsapp")} />
+          <Input
+            id="whatsapp"
+            placeholder="(99)99999-9999"
+            {...register("whatsapp", { onChange: (e) => (e.target.value = maskPhone(e.target.value)) })}
+          />
         </div>
       </div>
 

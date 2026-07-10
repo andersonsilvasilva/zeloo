@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { maskPhone } from "@/lib/utils/format";
 import {
   createUserSchema,
   updateUserSchema,
@@ -116,7 +117,11 @@ export function UserForm({ options, mode, userId, defaultValues, currentUserId, 
 
       <div className="space-y-1">
         <Label htmlFor="phone">Telefone</Label>
-        <Input id="phone" {...register("phone")} />
+        <Input
+          id="phone"
+          placeholder="(99)99999-9999"
+          {...register("phone", { onChange: (e) => (e.target.value = maskPhone(e.target.value)) })}
+        />
       </div>
 
       {mode === "create" && (

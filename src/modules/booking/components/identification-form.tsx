@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { identifyClientAction } from "@/modules/booking/actions/identify-client.action";
+import { maskPhone } from "@/lib/utils/format";
 
 /** Conta (e-mail/senha) fica fora do RHF — só é obrigatória quando `wantsAccount` está marcado, gerido à parte. */
 const identificationFieldsSchema = z.object({
@@ -82,7 +83,12 @@ export function IdentificationForm({ barberId, serviceIds }: IdentificationFormP
         <Label htmlFor="phone" className="text-booking-text-secondary">
           Seu telefone
         </Label>
-        <Input id="phone" placeholder="(00) 00000-0000" autoComplete="tel" {...register("phone")} />
+        <Input
+          id="phone"
+          placeholder="(99)99999-9999"
+          autoComplete="tel"
+          {...register("phone", { onChange: (e) => (e.target.value = maskPhone(e.target.value)) })}
+        />
         {errors.phone && <p className="text-sm text-danger">{errors.phone.message}</p>}
       </div>
 
