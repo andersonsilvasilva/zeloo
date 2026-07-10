@@ -61,7 +61,8 @@ const SLOT_STEP_MINUTES = 15;
  * Chamada apenas pela camada de actions (nunca diretamente por componentes).
  */
 export class AppointmentService {
-  async create(input: CreateAppointmentInput, createdById: string) {
+  /** `createdById` fica ausente em agendamentos criados via `/agendar` sem conta (cliente não é um User). */
+  async create(input: CreateAppointmentInput, createdById?: string) {
     return prisma.$transaction(async (tx) => {
       const repo = new AppointmentRepository(tx);
 

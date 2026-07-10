@@ -15,6 +15,11 @@ generator client {
   // como a Hostinger — evita o engine da Prisma quebrar em produção por
   // binário incompatível com o SO do servidor.
   binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x"]
+  // Engine "binary" (processo separado) em vez de "library" (addon nativo
+  // embutido no processo Node): o engine "library" travava com "PANIC: timer
+  // has gone away" no sandbox CageFS da Hostinger — restrição de baixo nível
+  // do ambiente compartilhado, não um bug da aplicação.
+  engineType    = "binary"
 }
 
 datasource db {

@@ -32,6 +32,19 @@ const config: Config = {
         success: "#22C55E",
         danger: "#EF4444",
         warning: "#F59E0B",
+
+        // Vitrine pública de agendamento (/agendar) — identidade própria,
+        // separada do dourado/bronze do painel interno (não reutilizar "primary" etc. ali).
+        booking: {
+          bg: "#0A0A0A",
+          card: "#F3E6A3",
+          "card-foreground": "#181818",
+          primary: "#E8B923",
+          "primary-light": "#F3CB4D",
+          text: "#FFFFFF",
+          "text-secondary": "#A3A3A3",
+          border: "#2A2A2A",
+        },
       },
       borderRadius: {
         DEFAULT: "0.5rem",

@@ -79,4 +79,21 @@ export class ServiceRepository {
       orderBy: { name: "asc" },
     });
   }
+
+  /** Campos seguros para a vitrine pública de agendamento (`/agendar`) — nada sensível. */
+  async listActiveForPublicBooking() {
+    return this.db.service.findMany({
+      where: { status: "ACTIVE" },
+      select: {
+        id: true,
+        name: true,
+        shortDescription: true,
+        price: true,
+        durationMinutes: true,
+        category: true,
+        advertisingImage: { select: { storagePath: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+  }
 }

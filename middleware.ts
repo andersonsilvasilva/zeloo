@@ -10,7 +10,7 @@ import { authConfig } from "@/lib/auth/auth.config";
  */
 const { auth } = NextAuth(authConfig);
 
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/agendar"];
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;

@@ -99,4 +99,18 @@ export class BarberRepository {
       orderBy: { name: "asc" },
     });
   }
+
+  /** Campos seguros para a vitrine pública de agendamento (`/agendar`) — nada sensível. */
+  async listActiveForPublicBooking() {
+    return this.db.barber.findMany({
+      where: { status: "ACTIVE" },
+      select: {
+        id: true,
+        professionalName: true,
+        bio: true,
+        profileImage: { select: { storagePath: true } },
+      },
+      orderBy: { professionalName: "asc" },
+    });
+  }
 }
