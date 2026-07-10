@@ -7,10 +7,10 @@ export default async function AgendarLandingPage() {
 
   return (
     <div className="flex min-h-[80vh] flex-col items-center justify-center text-center">
-      <div className="flex h-40 w-40 items-center justify-center rounded-full border-4 border-booking-primary bg-booking-bg shadow-[0_0_30px_rgba(232,185,35,0.25)]">
+      <div className="flex h-[340px] w-[340px] items-center justify-center rounded-full border-4 border-booking-primary bg-booking-bg shadow-[0_0_30px_rgba(232,185,35,0.25)]">
         {settings.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={settings.logoUrl} alt={settings.name} className="h-28 w-28 rounded-full object-contain" />
+          <img src={settings.logoUrl} alt={settings.name} className="h-[300px] w-[300px] rounded-full object-contain" />
         ) : (
           <Scissors size={56} className="text-booking-primary" />
         )}
