@@ -31,6 +31,7 @@ export const PERMISSIONS = {
     create: "appointments.create",
     update: "appointments.update",
     cancel: "appointments.cancel",
+    delete: "appointments.delete",
   },
   finance: {
     view: "finance.view",

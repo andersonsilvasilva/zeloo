@@ -76,6 +76,10 @@ export class AppointmentRepository {
     return this.db.appointment.update({ where: { id }, data: { status } });
   }
 
+  async delete(id: string) {
+    await this.db.appointment.delete({ where: { id } });
+  }
+
   /** Reagenda um agendamento existente, substituindo os serviços vinculados. */
   async reschedule(params: {
     id: string;

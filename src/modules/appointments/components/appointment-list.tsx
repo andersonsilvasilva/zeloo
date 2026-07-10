@@ -9,6 +9,7 @@ import { formatCurrency } from "@/lib/utils/format";
 import { AppointmentStatusBadge } from "@/modules/appointments/components/appointment-status-badge";
 import { AppointmentFormDialog } from "@/modules/appointments/components/appointment-form-dialog";
 import { updateAppointmentStatusAction } from "@/modules/appointments/actions/update-appointment-status.action";
+import { deleteAppointmentAction } from "@/modules/appointments/actions/delete-appointment.action";
 import { formatDateOnlyBR } from "@/modules/appointments/utils/date-only";
 import { sendAppointmentConfirmationAction } from "@/modules/messages/actions/send-appointment-confirmation.action";
 import { QuickRegisterPaymentButton } from "@/modules/finance/components/quick-register-payment-button";
@@ -47,6 +48,7 @@ export interface AppointmentListProps {
   canCancel: boolean;
   canSendMessages: boolean;
   canRegisterPayment: boolean;
+  canDelete: boolean;
 }
 
 export function AppointmentList({
@@ -56,6 +58,7 @@ export function AppointmentList({
   canCancel,
   canSendMessages,
   canRegisterPayment,
+  canDelete,
 }: AppointmentListProps) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -68,6 +71,22 @@ export function AppointmentList({
     setRowErrors((prev) => ({ ...prev, [appointment.id]: "" }));
 
     const result = await updateAppointmentStatusAction({ id: appointment.id, status });
+
+    setPendingId(null);
+    if (!result.success) {
+      setRowErrors((prev) => ({ ...prev, [appointment.id]: result.error }));
+      return;
+    }
+    router.refresh();
+  }
+
+  async function handleDelete(appointment: AppointmentListItem) {
+    if (!confirm(`Excluir definitivamente o agendamento de ${appointment.client.name}?`)) return;
+
+    setPendingId(appointment.id);
+    setRowErrors((prev) => ({ ...prev, [appointment.id]: "" }));
+
+    const result = await deleteAppointmentAction({ id: appointment.id });
 
     setPendingId(null);
     if (!result.success) {
@@ -165,6 +184,16 @@ export function AppointmentList({
                       suggestedAmount={appointment.totalPrice}
                       onRegistered={() => router.refresh()}
                     />
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      disabled={pendingId === appointment.id}
+                      onClick={() => handleDelete(appointment)}
+                    >
+                      Excluir
+                    </Button>
                   )}
                 </div>
               </div>

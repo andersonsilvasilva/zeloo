@@ -40,6 +40,13 @@ export class InvalidStatusTransitionError extends Error {
   }
 }
 
+export class AppointmentHasPaymentError extends Error {
+  constructor() {
+    super("Este agendamento já tem pagamento registrado e não pode ser excluído.");
+    this.name = "AppointmentHasPaymentError";
+  }
+}
+
 /** Transições de status permitidas (spec: fluxo de agendamento). Estados finais não têm saída. */
 const STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   PENDING: ["CONFIRMED", "CANCELLED"],
@@ -163,6 +170,21 @@ export class AppointmentService {
 
   async cancel(id: string): Promise<AppointmentListItem> {
     return this.updateStatus(id, "CANCELLED");
+  }
+
+  /**
+   * Exclusão definitiva (diferente de cancelar): remove o registro do banco.
+   * Bloqueada se já existe pagamento vinculado — o relacionamento Payment ->
+   * Appointment é onDelete: Cascade no schema, então excluir apagaria também
+   * o histórico financeiro (ver prisma/schema.prisma).
+   */
+  async delete(id: string): Promise<void> {
+    const repo = new AppointmentRepository();
+    const existing = await repo.findById(id);
+    if (!existing) throw new AppointmentNotFoundError();
+    if (existing.payments.length > 0) throw new AppointmentHasPaymentError();
+
+    await repo.delete(id);
   }
 
   async getById(id: string): Promise<AppointmentDetail> {
