@@ -292,7 +292,10 @@ prisma/
 ## 👨‍💻 Desenvolvedor
 
 Desenvolvido por **Anderson A. Barros**
+
+[![Site](https://img.shields.io/badge/site-andersonbarros.dev-000000?style=flat-square&logo=googlechrome&logoColor=white)](https://andersonbarros.dev/)
 [![GitHub](https://img.shields.io/badge/GitHub-andersonsilvasilva-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/andersonsilvasilva)
+[![Empresa](https://img.shields.io/badge/empresa-High_Tech_Tecnologia-0EA5E9?style=flat-square&logo=buildkite&logoColor=white)](https://hightechtecnologia.com.br/)
 
 ---
 
