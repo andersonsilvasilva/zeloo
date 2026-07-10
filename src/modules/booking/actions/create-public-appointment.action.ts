@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/auth";
 import {
   createPublicAppointmentSchema,
@@ -25,6 +26,8 @@ export async function createPublicAppointmentAction(rawInput: CreatePublicAppoin
   try {
     const service = new BookingService();
     const result = await service.createAppointmentForBooking(input, session?.user?.id ?? null);
+    revalidatePath("/");
+    revalidatePath("/agenda");
     return { success: true as const, ...result };
   } catch (error) {
     if (

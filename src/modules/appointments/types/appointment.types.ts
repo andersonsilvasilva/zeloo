@@ -46,6 +46,7 @@ export interface AppointmentListItem {
   services: { id: string; name: string }[];
   totalPrice: number;
   totalDurationMinutes: number;
+  hasPayment: boolean;
 }
 
 export interface AppointmentDetail extends AppointmentListItem {

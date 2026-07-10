@@ -283,6 +283,7 @@ export class AppointmentService {
       services: appointment.services.map((s) => ({ id: s.service.id, name: s.service.name })),
       totalPrice: appointment.services.reduce((sum, s) => sum + s.price.toNumber(), 0),
       totalDurationMinutes: appointment.services.reduce((sum, s) => sum + s.durationMinutes, 0),
+      hasPayment: appointment.payments.length > 0,
     };
   }
 

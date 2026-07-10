@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils/format";
 import { AppointmentStatusBadge } from "@/modules/appointments/components/appointment-status-badge";
 import { AppointmentFormDialog } from "@/modules/appointments/components/appointment-form-dialog";
 import { updateAppointmentStatusAction } from "@/modules/appointments/actions/update-appointment-status.action";
 import { formatDateOnlyBR } from "@/modules/appointments/utils/date-only";
 import { sendAppointmentConfirmationAction } from "@/modules/messages/actions/send-appointment-confirmation.action";
+import { QuickRegisterPaymentButton } from "@/modules/finance/components/quick-register-payment-button";
 import type {
   AppointmentFormOptions,
   AppointmentListItem,
@@ -44,6 +46,7 @@ export interface AppointmentListProps {
   canUpdate: boolean;
   canCancel: boolean;
   canSendMessages: boolean;
+  canRegisterPayment: boolean;
 }
 
 export function AppointmentList({
@@ -52,6 +55,7 @@ export function AppointmentList({
   canUpdate,
   canCancel,
   canSendMessages,
+  canRegisterPayment,
 }: AppointmentListProps) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -114,6 +118,9 @@ export function AppointmentList({
                       {formatDateOnlyBR(appointment.appointmentDate)} às {format(appointment.startTime, "HH:mm")}
                     </span>
                     <AppointmentStatusBadge status={appointment.status} />
+                    {appointment.status === "COMPLETED" && !appointment.hasPayment && (
+                      <Badge variant="warning">Pagamento pendente</Badge>
+                    )}
                   </div>
                   <p className="text-sm text-text-secondary">
                     {appointment.client.name} · {appointment.barber.professionalName}
@@ -152,6 +159,13 @@ export function AppointmentList({
                       {action.label}
                     </Button>
                   ))}
+                  {canRegisterPayment && appointment.status === "COMPLETED" && !appointment.hasPayment && (
+                    <QuickRegisterPaymentButton
+                      appointmentId={appointment.id}
+                      suggestedAmount={appointment.totalPrice}
+                      onRegistered={() => router.refresh()}
+                    />
+                  )}
                 </div>
               </div>
               {rowErrors[appointment.id] && (

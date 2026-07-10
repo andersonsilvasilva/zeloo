@@ -10,6 +10,7 @@ const appointmentInclude = {
   barber: { select: { id: true, professionalName: true } },
   createdBy: { select: { id: true, name: true } },
   services: { include: { service: { select: { id: true, name: true } } } },
+  payments: { select: { id: true } },
 } satisfies Prisma.AppointmentInclude;
 
 export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{ include: typeof appointmentInclude }>;

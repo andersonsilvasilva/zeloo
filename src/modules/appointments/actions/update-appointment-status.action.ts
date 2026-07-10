@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
@@ -27,6 +28,13 @@ export async function updateAppointmentStatusAction(rawInput: UpdateAppointmentS
   try {
     const service = new AppointmentService();
     const appointment = await service.updateStatus(input.id, input.status);
+    // O dashboard/relatórios são páginas separadas do Next.js Router Cache —
+    // sem isso, quem confirma/conclui um agendamento e volta pro dashboard
+    // via menu lateral (<Link>) continua vendo os números de antes da
+    // mudança até o cache expirar sozinho (~30s) ou um refresh completo.
+    revalidatePath("/");
+    revalidatePath("/relatorios");
+    revalidatePath("/agenda");
     return { success: true as const, appointment };
   } catch (error) {
     if (error instanceof AppointmentNotFoundError || error instanceof InvalidStatusTransitionError) {

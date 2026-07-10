@@ -132,43 +132,49 @@ export class FinanceService {
   }
 
   async registerPayment(input: RegisterPaymentInput, userId: string) {
-    return prisma.$transaction(async (tx) => {
-      const repo = new FinanceRepository(tx);
+    return prisma.$transaction(
+      async (tx) => {
+        const repo = new FinanceRepository(tx);
 
-      const register = await repo.findOpenRegister();
-      if (!register) throw new NoOpenCashRegisterError();
+        const register = await repo.findOpenRegister();
+        if (!register) throw new NoOpenCashRegisterError();
 
-      const appointment = await repo.findAppointmentById(input.appointmentId);
-      if (!appointment) throw new AppointmentNotFoundError();
+        const appointment = await repo.findAppointmentById(input.appointmentId);
+        if (!appointment) throw new AppointmentNotFoundError();
 
-      const existingPayments = await repo.countPaymentsForAppointment(input.appointmentId);
-      if (appointment.status !== "COMPLETED" || existingPayments > 0) {
-        throw new AppointmentNotPayableError();
-      }
+        const existingPayments = await repo.countPaymentsForAppointment(input.appointmentId);
+        if (appointment.status !== "COMPLETED" || existingPayments > 0) {
+          throw new AppointmentNotPayableError();
+        }
 
-      const now = new Date();
-      const payment = await repo.createPayment({
-        appointment: { connect: { id: input.appointmentId } },
-        amount: input.amount,
-        paymentMethod: input.paymentMethod,
-        status: "PAID",
-        paidAt: now,
-        receivedBy: { connect: { id: userId } },
-      });
+        const now = new Date();
+        const payment = await repo.createPayment({
+          appointment: { connect: { id: input.appointmentId } },
+          amount: input.amount,
+          paymentMethod: input.paymentMethod,
+          status: "PAID",
+          paidAt: now,
+          receivedBy: { connect: { id: userId } },
+        });
 
-      const entry = await repo.createCashbookEntry({
-        type: "CREDIT",
-        description: `Pagamento — ${appointment.client.name}`,
-        amount: input.amount,
-        paymentMethod: input.paymentMethod,
-        appointmentId: input.appointmentId,
-        payment: { connect: { id: payment.id } },
-        transactionDate: now,
-        createdBy: { connect: { id: userId } },
-      });
+        const entry = await repo.createCashbookEntry({
+          type: "CREDIT",
+          description: `Pagamento — ${appointment.client.name}`,
+          amount: input.amount,
+          paymentMethod: input.paymentMethod,
+          appointmentId: input.appointmentId,
+          payment: { connect: { id: payment.id } },
+          transactionDate: now,
+          createdBy: { connect: { id: userId } },
+        });
 
-      return this.toCashbookItem(entry);
-    });
+        return this.toCashbookItem(entry);
+      },
+      // 5 consultas sequenciais numa transação: o limite padrão de 5s do Prisma
+      // é apertado demais sob rede mais lenta até o banco (ex.: hospedagem
+      // compartilhada) — visto travar com "Transaction already closed" em teste.
+      { timeout: 15000 },
+    );
   }
 
   /** Balancete débito/crédito: agrupa lançamentos por categoria no período, com totais gerais. */

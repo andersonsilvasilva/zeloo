@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
@@ -22,6 +23,8 @@ export async function updateAppointmentAction(rawInput: RescheduleAppointmentInp
   try {
     const service = new AppointmentService();
     const appointment = await service.update(input);
+    revalidatePath("/");
+    revalidatePath("/agenda");
     return { success: true as const, appointment };
   } catch (error) {
     if (error instanceof AppointmentConflictError || error instanceof AppointmentNotFoundError) {

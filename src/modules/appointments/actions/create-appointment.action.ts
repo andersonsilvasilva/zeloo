@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
@@ -28,6 +29,9 @@ export async function createAppointmentAction(rawInput: CreateAppointmentInput) 
     const confirmation = await autoSendAppointmentConfirmationAction({ appointmentId: appointment.id }).catch(
       () => ({ success: false as const }),
     );
+
+    revalidatePath("/");
+    revalidatePath("/agenda");
 
     // Retorna apenas o id — o registro completo tem campos Decimal (preço),
     // que não podem cruzar a fronteira serializável da Server Action.

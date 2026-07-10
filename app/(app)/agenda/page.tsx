@@ -18,11 +18,12 @@ export default async function AgendaPage({
   const canView = await hasPermission(PERMISSIONS.appointments.view);
   if (!canView) return <ComingSoon title="Agenda" />;
 
-  const [canCreate, canUpdate, canCancel, canSendMessages] = await Promise.all([
+  const [canCreate, canUpdate, canCancel, canSendMessages, canRegisterPayment] = await Promise.all([
     hasPermission(PERMISSIONS.appointments.create),
     hasPermission(PERMISSIONS.appointments.update),
     hasPermission(PERMISSIONS.appointments.cancel),
     hasPermission(PERMISSIONS.messages.send),
+    hasPermission(PERMISSIONS.finance.create),
   ]);
 
   const date = searchParams.date || format(new Date(), "yyyy-MM-dd");
@@ -58,6 +59,7 @@ export default async function AgendaPage({
         canUpdate={canUpdate}
         canCancel={canCancel}
         canSendMessages={canSendMessages}
+        canRegisterPayment={canRegisterPayment}
       />
     </div>
   );
