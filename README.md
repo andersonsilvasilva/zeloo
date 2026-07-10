@@ -1,240 +1,294 @@
-# Barbershop SaaS — Sistema de Gestão para Barbearia
+<div align="center">
 
-Aplicação web completa para gestão operacional, financeira e comercial de uma
-barbearia: clientes, barbeiros, serviços, agendamento, financeiro (livro
-caixa), relatórios, comunicação (WhatsApp/SMS), usuários e permissões (RBAC).
+# 💈 Barbershop SaaS
 
-> **Status deste repositório:** fundação/scaffold gerada — arquitetura,
-> schema do banco, RBAC, design system e um fluxo de exemplo completo
-> (agendamento) já implementados ponta a ponta. Os demais módulos têm a
-> estrutura de pastas e um README próprio descrevendo o que falta
-> implementar. Veja "Próximos passos" no fim deste arquivo.
+### Sistema completo de gestão para barbearias — agendamento, financeiro, clientes e muito mais
 
-## Stack
+Aplicação web full-stack para gestão operacional, financeira e comercial de uma barbearia, com um fluxo público de **auto-agendamento** para os clientes finais.
 
-- **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind CSS
-- **Backend:** Server Actions / Route Handlers do próprio Next.js, em
-  camadas (Action → Service → Repository)
-- **Banco de dados:** MySQL 8+ (obrigatório — não usar PostgreSQL)
-- **ORM:** Prisma
-- **Autenticação:** Auth.js (Credentials; OAuth pode ser adicionado depois)
-- **Autorização:** RBAC centralizado (roles + permissions no banco)
-- **Validação:** Zod (schemas compartilhados frontend/backend)
-- **Formulários:** React Hook Form + Zod Resolver
-- **Gráficos:** Recharts
-- **Imagens:** Sharp (thumbnail/medium/large) + StorageProvider abstrato
-- **Ícones:** Lucide React
-- **Datas:** date-fns / date-fns-tz
-- **Testes:** Vitest (unitário) + Playwright (e2e)
+[![Next.js](https://img.shields.io/badge/Next.js_14-black?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-black?style=flat-square&logo=react&logoColor=61DAFB)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-2D3748?style=flat-square&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![MySQL](https://img.shields.io/badge/MySQL_8-4479A1?style=flat-square&logo=mysql&logoColor=white)](https://www.mysql.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Auth.js](https://img.shields.io/badge/Auth.js_v5-000000?style=flat-square&logo=auth0&logoColor=white)](https://authjs.dev/)
+[![Zod](https://img.shields.io/badge/Zod-3E67B1?style=flat-square&logo=zod&logoColor=white)](https://zod.dev/)
+[![WhatsApp Cloud API](https://img.shields.io/badge/WhatsApp_Cloud_API-25D366?style=flat-square&logo=whatsapp&logoColor=white)](https://developers.facebook.com/docs/whatsapp)
 
-## Requisitos
+[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Deploy](https://img.shields.io/badge/deploy-Hostinger_(Node.js)-673DE6?style=flat-square&logo=hostinger&logoColor=white)](#-deploy-em-produção)
+[![Status](https://img.shields.io/badge/status-em_produção-success?style=flat-square)](#)
+[![License](https://img.shields.io/badge/license-privado-red?style=flat-square)](#-licença)
 
-- Node.js 20+
-- MySQL 8+ rodando localmente ou remoto
-- npm (ou pnpm/yarn, ajustando os comandos abaixo)
+</div>
 
-## Instalação
+---
 
-```bash
-npm install
-cp .env.example .env
-# edite .env com sua string de conexão MySQL e AUTH_SECRET
+## 📖 Índice
+
+- [Visão geral](#-visão-geral)
+- [Funcionalidades](#-funcionalidades)
+- [Stack técnica](#-stack-técnica)
+- [Arquitetura](#-arquitetura)
+- [Controle de acesso (RBAC)](#-controle-de-acesso-rbac)
+- [Como rodar localmente](#-como-rodar-localmente)
+- [Variáveis de ambiente](#-variáveis-de-ambiente)
+- [Banco de dados](#-banco-de-dados)
+- [Dados fictícios (seed de demonstração)](#-dados-fictícios-seed-de-demonstração)
+- [Integração com WhatsApp](#-integração-com-whatsapp)
+- [Testes](#-testes)
+- [Deploy em produção](#-deploy-em-produção)
+- [Estrutura de pastas](#-estrutura-de-pastas)
+- [Roadmap](#-roadmap)
+- [Licença](#-licença)
+
+---
+
+## 🎯 Visão geral
+
+O **Barbershop SaaS** cobre o ciclo completo de uma barbearia: da divulgação e captação de clientes (vitrine pública com auto-agendamento) até a gestão interna do dia a dia (agenda, caixa, relatórios, equipe e permissões).
+
+O projeto tem **duas frentes**:
+
+| | |
+|---|---|
+| 🌐 **Vitrine pública** (`/agendar`) | Cliente final escolhe barbeiro e serviço, se identifica (com ou sem conta) e agenda seu próprio horário — sem precisar de login prévio. |
+| 🔐 **Painel interno** (`/`) | Equipe da barbearia (admin, atendente, barbeiro, caixa) gerencia agenda, clientes, financeiro, relatórios, mensagens e usuários, cada um enxergando só o que sua permissão libera. |
+
+---
+
+## ✨ Funcionalidades
+
+### Vitrine pública de agendamento (`/agendar`)
+- Landing com logomarca, nome da barbearia e mensagem de marketing configuráveis
+- Escolha de barbeiro + serviço(s) numa única tela, com foto, preço e duração
+- Identificação rápida por nome + telefone (sem senha) — ou criação de conta opcional (e-mail + senha) para acompanhar o histórico depois
+- Calendário com disponibilidade em tempo real (reaproveita a mesma lógica de conflito de horário do painel interno) e seleção de horário
+- Confirmação com resumo e valor total, com auto-envio de confirmação por WhatsApp quando aplicável
+
+### Painel interno
+- **Dashboard** com indicadores do dia/semana/mês/ano, gráficos de faturamento e distribuição de serviços, relógio digital ao vivo com a agenda do dia e box de aniversariantes (hoje/semana/mês)
+- **Agenda**: CRUD completo de agendamentos com checagem automática de conflito de horário, fluxo de status (`Pendente → Confirmado → Em atendimento → Concluído`, com `Cancelado`/`Não compareceu`), reagendamento e atalho para registrar pagamento direto na lista
+- **Clientes**, **Barbeiros** e **Serviços**: CRUD completo com upload de fotos (thumbnail/média/grande gerados automaticamente)
+- **Financeiro**: abertura/fechamento de caixa, livro-caixa (entradas/saídas), registro de pagamentos e **Balancete débito/crédito** por categoria, com impressão/exportação em PDF
+- **Relatórios**: indicadores por período customizável (diferente dos buckets fixos do dashboard), com impressão/exportação em PDF — barbeiros veem automaticamente só os próprios números
+- **Mensagens**: modelos de mensagem com variáveis dinâmicas (`{{clientName}}`, `{{barber_agendado}}`, `{{resumo_agendamento}}`), envio manual ou automático ao criar/concluir agendamento, e **envio real via WhatsApp Cloud API**
+- **Usuários e permissões**: gestão de contas da equipe e papéis (RBAC configurável pela própria interface)
+- **Configurações**: logomarca, nome, fuso horário e dados da barbearia
+
+---
+
+## 🛠️ Stack técnica
+
+| Camada | Tecnologia |
+|---|---|
+| Frontend | Next.js 14 (App Router), React, TypeScript, Tailwind CSS |
+| Backend | Server Actions do próprio Next.js, em camadas (`Component → Action → Service → Repository`) |
+| Banco de dados | MySQL 8+ |
+| ORM | Prisma (engine `binary`, `binaryTargets` para Windows + Linux/Debian) |
+| Autenticação | Auth.js v5 (Credentials) |
+| Autorização | RBAC centralizado (roles + permissions no banco, sem hardcode de papéis no código) |
+| Validação | Zod (schemas compartilhados frontend/backend) |
+| Formulários | React Hook Form + Zod Resolver |
+| Gráficos | Recharts |
+| Imagens | Sharp (variantes thumb/medium/large) + `StorageProvider` abstrato (local hoje, S3/R2/Supabase plugáveis) |
+| Mensageria | WhatsApp Cloud API (Meta) |
+| Ícones | Lucide React |
+| Datas | date-fns / date-fns-tz |
+| Testes | Vitest (unitário) + Playwright (e2e) |
+| Deploy | Node.js standalone via Passenger (Hostinger) |
+
+---
+
+## 🏗️ Arquitetura
+
+Todo módulo de domínio segue a mesma regra de camadas — **nenhum componente React importa o Prisma Client diretamente**:
+
+```
+Component (UI)
+    │
+    ▼
+Action ("use server" — sessão + permissão + validação Zod)
+    │
+    ▼
+Service (regra de negócio, transações)
+    │
+    ▼
+Repository (Prisma / MySQL)
 ```
 
-Gere um `AUTH_SECRET`:
+Use o módulo `appointments` como referência completa desse padrão (schema Zod → action → service transacional com checagem de conflito → repository).
+
+O fluxo público (`/agendar`) vive em `src/modules/booking/` e **nunca confia num `clientId` vindo do formulário**: resolve o cliente pela sessão (quando existe conta) ou reconfere o telefone informado contra o cadastro antes de criar o agendamento.
+
+---
+
+## 🔐 Controle de acesso (RBAC)
+
+| Papel | Escopo |
+|---|---|
+| `ADMIN` | Acesso total |
+| `ATTENDANT` | Clientes, agenda, barbeiros/serviços (leitura) — sem financeiro |
+| `BARBER` | Agenda e relatórios **restritos aos próprios atendimentos** — nunca vê financeiro de outros barbeiros |
+| `CASHIER` | Financeiro + agenda + clientes |
+| `CLIENT` | Auto-agendamento (`/agendar`) |
+
+Permissões centralizadas em `src/lib/auth/permissions.ts` (ex.: `clients.view`, `finance.create`, `appointments.cancel`). A checagem **nunca** é feita como `if (role === "ADMIN")` — sempre via `requirePermission()` (`src/lib/auth/rbac.ts`), que consulta a relação `Role → RolePermission → Permission` no banco. Isso permite ao Administrador reconfigurar permissões pela própria tela de **Usuários**, sem alterar código.
+
+> **Regra de negócio importante:** o papel `BARBER` nunca recebe permissões `finance.*` — barbeiros não devem visualizar informações financeiras globais da barbearia.
+
+---
+
+## 🚀 Como rodar localmente
+
+**Pré-requisitos:** Node.js 20+, MySQL 8+, npm.
 
 ```bash
+git clone https://github.com/andersonsilvasilva/barbearia.git
+cd barbearia
+npm install
+cp .env.example .env
+# edite o .env com sua string de conexão MySQL e gere um AUTH_SECRET:
 openssl rand -base64 32
 ```
 
-## Banco de dados
-
-Crie o banco no MySQL:
-
-```sql
-CREATE DATABASE barbershop_saas CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-Ajuste `DATABASE_URL` no `.env`:
-
-```
-DATABASE_URL="mysql://usuario:senha@localhost:3306/barbershop_saas"
-```
-
-## Migrations
-
 ```bash
-npm run prisma:migrate      # cria as tabelas (dev)
-npm run prisma:generate     # gera o Prisma Client
-```
-
-Para produção:
-
-```bash
-npm run prisma:deploy
-```
-
-## Seed
-
-Popula roles, permissions (RBAC), um usuário administrador e configurações
-padrão da barbearia:
-
-```bash
-npm run prisma:seed
-```
-
-Login padrão criado pelo seed:
-
-- **E-mail:** `admin@barbershop.local`
-- **Senha:** `Admin@123`
-
-**Troque essa senha imediatamente em produção.**
-
-## Executando em desenvolvimento
-
-```bash
+npm run prisma:migrate    # cria as tabelas (dev)
+npm run prisma:seed       # popula RBAC + usuário admin + configurações padrão
 npm run dev
 ```
 
 Acesse `http://localhost:3000`.
 
-## Build de produção
+**Login padrão criado pelo seed** (troque a senha imediatamente em produção):
+
+- E-mail: `admin@barbershop.local`
+- Senha: `Admin@123`
+
+---
+
+## 🔧 Variáveis de ambiente
+
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | String de conexão MySQL |
+| `AUTH_SECRET` | Chave do Auth.js (`openssl rand -base64 32`) |
+| `AUTH_URL` | URL pública da aplicação |
+| `AUTH_TRUST_HOST` | `true` quando atrás de proxy (produção) |
+| `STORAGE_PROVIDER` | `local` \| `s3` \| `r2` \| `supabase` |
+| `WHATSAPP_BUSINESS_API_TOKEN` | Token da WhatsApp Cloud API (Meta) |
+| `WHATSAPP_PHONE_NUMBER_ID` | Phone Number ID cadastrado na Meta |
+| `WHATSAPP_TEMPLATE_NAME` / `WHATSAPP_TEMPLATE_LANGUAGE` | Template aprovado na Meta para envio automático |
+| `TWILIO_*` / `ZENVIA_API_TOKEN` | Provedores alternativos de SMS (opcional, não integrado ainda) |
+
+Veja todos os valores de exemplo em [`.env.example`](.env.example).
+
+---
+
+## 🗄️ Banco de dados
+
+Schema completo em [`prisma/schema.prisma`](prisma/schema.prisma) — 20 models cobrindo autenticação/RBAC, clientes, barbeiros, serviços, agendamentos, financeiro, mensageria, mídia e auditoria.
 
 ```bash
-npm run build
-npm run start
+npm run prisma:migrate     # aplica migrations em dev
+npm run prisma:deploy      # aplica migrations em produção
+npm run prisma:generate    # gera o Prisma Client
 ```
 
-## Testes
+> **Nota sobre hospedagem compartilhada:** em ambientes com restrições de sandbox (ex.: CageFS da Hostinger), rodar `prisma migrate deploy` direto pode falhar com múltiplas instruções SQL em lote — nesse caso, aplique a migration instrução por instrução (ver histórico do projeto) ou rode as migrations num ambiente com acesso irrestrito ao banco.
+
+---
+
+## 🎭 Dados fictícios (seed de demonstração)
 
 ```bash
-npm run test        # Vitest (unitário)
-npm run test:e2e     # Playwright (e2e)
+npm run prisma:seed:demo               # barbeiros, clientes, serviços, equipe de teste
+npm run prisma:seed:demo:appointments  # histórico de agendamentos/pagamentos (últimos ~60 dias + próximos dias)
 ```
 
-Prioridades de teste (conforme especificação): login, permissões, cadastro
-de cliente/barbeiro/serviço, agendamento, conflito de horários,
-cancelamento, registro de pagamento, entrada no livro caixa, fechamento de
-caixa.
+Usuários fictícios (barbeiros/atendentes/caixa) usam a senha `Teste@123`.
 
-## Arquitetura
+---
+
+## 💬 Integração com WhatsApp
+
+O envio de mensagens (confirmação automática de agendamento, modelos manuais) usa a **WhatsApp Cloud API** da Meta (`src/lib/whatsapp/whatsapp-client.ts`).
+
+Pontos de atenção:
+- Fora da janela de 24h de uma conversa iniciada pelo cliente, a Meta só aceita mensagens de **template pré-aprovado** — configure `WHATSAPP_TEMPLATE_NAME`/`WHATSAPP_TEMPLATE_LANGUAGE` com um template aprovado no [Meta Business Manager](https://business.facebook.com/).
+- Números de teste precisam estar na lista de destinatários autorizados enquanto o app estiver em modo de desenvolvimento na Meta.
+
+---
+
+## 🧪 Testes
+
+Vitest e Playwright já estão nas dependências, mas ainda **não há uma suíte de testes automatizados commitada** — a validação de cada funcionalidade nesta fase foi feita via scripts Playwright avulsos (fluxo completo no navegador) durante o desenvolvimento, descartados após o uso. Escrever a suíte definitiva é o próximo passo natural (ver [Roadmap](#-roadmap)).
+
+Prioridades sugeridas: login e permissões, CRUD de cliente/barbeiro/serviço, agendamento e conflito de horários, cancelamento, registro de pagamento, entrada no livro-caixa, fechamento de caixa e o fluxo público de auto-agendamento (com e sem conta).
+
+---
+
+## 📦 Deploy em produção
+
+Aplicação em produção rodando como **Node.js standalone** via **Phusion Passenger** (hospedagem compartilhada Hostinger, sem seletor de Node.js no painel — runtime acessado diretamente via `/opt/alt/alt-nodejs20`).
+
+```bash
+npm run build   # gera .next/standalone (output: "standalone" no next.config.js)
+```
+
+Pontos específicos desse ambiente (documentados para reprodutibilidade):
+
+- `.htaccess` com as diretivas do Passenger é **versionado no repositório** — a hospedagem faz auto-deploy via Git a cada push e limpa arquivos não versionados em `public_html`, o que já apagou uma cópia criada manualmente.
+- `engineType = "binary"` no `generator client` do Prisma — o engine `library` (addon nativo embutido) trava com `PANIC: timer has gone away` no sandbox da hospedagem; o engine binário (processo separado) contorna a restrição.
+- O build (`next build`) não roda de forma confiável direto no servidor compartilhado (o compilador SWC/Rust esbarra em restrições de processos do sandbox) — o build é feito localmente e o pacote (`.next/standalone` + `.next/static` + `public/`) é enviado pronto.
+
+---
+
+## 📁 Estrutura de pastas
 
 ```
+app/
+  (app)/                 # painel interno (autenticado) — agenda, clientes, financeiro...
+  agendar/                # vitrine pública de auto-agendamento
+  login/
 src/
-  app/                    # rotas do Next.js (App Router)
-  components/ui/          # Design System (Button, Input, Modal, DataTable...)
-  components/shared/      # componentes compostos reutilizáveis entre módulos
+  components/ui/          # Design System (Button, Input, Dialog, Select...)
+  components/shared/       # componentes compostos reutilizáveis entre módulos
   modules/
     auth/ users/ clients/ barbers/ services/ appointments/
-    finance/ reports/ messages/ settings/ media/
-      components/ actions/ services/ repositories/ schemas/ types/ permissions/
+    finance/ reports/ messages/ settings/ booking/
+      actions/ services/ repositories/ schemas/ types/ components/
   lib/
-    auth/       # auth.config.ts (Auth.js), permissions.ts, rbac.ts
+    auth/       # auth.config.ts, permissions.ts, rbac.ts, password.ts
+    whatsapp/   # cliente da WhatsApp Cloud API
     storage/    # StorageProvider abstrato + LocalStorageProvider (Sharp)
     prisma.ts   # singleton do Prisma Client
-    utils/
-  styles/globals.css      # tokens de identidade visual (dourado/preto)
+  styles/globals.css       # tokens de identidade visual
+prisma/
+  schema.prisma
+  migrations/
+  seed.ts                     # RBAC + admin + configurações padrão (npm run prisma:seed)
+  seed-demo.ts                 # barbeiros/clientes/serviços fictícios
+  seed-demo-appointments.ts    # histórico fictício de agendamentos (npm run prisma:seed:demo:appointments)
 ```
 
-**Regra de camadas (obrigatória em todo módulo):**
+---
 
-```
-Component (UI)  →  Action (sessão + permissão + validação Zod)
-                →  Service (regra de negócio)
-                →  Repository (Prisma/MySQL)
-```
+## 🗺️ Roadmap
 
-Nenhum componente React importa o Prisma Client diretamente. Veja o fluxo
-de agendamento em `src/modules/appointments/` como referência completa
-(schema Zod → action → service com transação e checagem de conflito →
-repository).
+- [ ] Suíte de testes automatizados (Vitest + Playwright já instalados, faltam os testes em si)
+- [ ] Templates de WhatsApp aprovados na Meta específicos da barbearia (hoje usa o template de exemplo `hello_world` para validar a integração)
+- [ ] Cancelamento/consulta de agendamento pelo próprio cliente via `/agendar` (link "Ver/cancelar agendamento")
+- [ ] Migração de armazenamento local para S3/R2 (interface `StorageProvider` já preparada)
+- [ ] Estratégia multi-tenant (suportar múltiplas barbearias na mesma base — ver anotações de arquitetura no código)
+- [ ] Consolidar `prisma/seed-appointments.ts` (sem script no `package.json`) e `prisma/seed-demo-appointments.ts` (script `prisma:seed:demo:appointments`) — dois scripts com propósito parecido, resultado de iterações diferentes
 
-## RBAC — Controle de Acesso
+---
 
-Roles: `ADMIN`, `BARBER`, `ATTENDANT`, `CASHIER`, `CLIENT`.
+## 📄 Licença
 
-Permissions centralizadas em `src/lib/auth/permissions.ts` (ex:
-`clients.view`, `finance.create`, `appointments.cancel`...). A checagem
-nunca é feita como `if (role === "ADMIN")` — sempre via
-`requirePermission()` (`src/lib/auth/rbac.ts`), que consulta a relaçãocelar
-Role → RolePermission → Permission no banco. Isso permite que o
-Administrador reconfigure permissões pela tela de "Permissões" sem
-alterar código.
+Projeto privado — todos os direitos reservados. Uso restrito à barbearia proprietária.
 
-**Importante:** o perfil `BARBER` nunca recebe permissões `finance.*` —
-barbeiros não devem visualizar informações financeiras globais da
-barbearia (ver módulo `reports` para os indicadores filtrados por barbeiro).
-
-## Identidade Visual
-
-Paleta definida em `tailwind.config.ts` e `src/styles/globals.css`:
-
-| Token | Cor |
-|---|---|
-| Primary (dourado) | `#C6A15B` / `#D4AF37` |
-| Background | `#080808` |
-| Background secundário | `#121212` |
-| Card | `#181818` |
-| Border | `#2A2A2A` |
-| Texto | `#FFFFFF` / `#B5B5B5` |
-| Success / Danger / Warning | `#22C55E` / `#EF4444` / `#F59E0B` |
-
-O dourado é usado com moderação (botões primários, ícones, bordas ativas,
-seleção) — nunca como grande área de fundo.
-
-## Upload de imagens
-
-Abstração `StorageProvider` (`src/lib/storage/storage-provider.ts`) com
-`upload / delete / getUrl / replace`. Implementação padrão:
-`LocalStorageProvider`, que usa Sharp para gerar automaticamente as
-variantes `thumb` / `medium` / `large` em `/public/uploads`.
-
-Para produção, implemente `S3StorageProvider`, `R2StorageProvider` ou
-`SupabaseStorageProvider` seguindo a mesma interface e troque via
-`STORAGE_PROVIDER` no `.env` — nenhum módulo de domínio precisa mudar.
-
-Formatos aceitos: PNG, JPG, JPEG, WEBP. Nomes de arquivo são sempre
-gerados aleatoriamente (nunca o nome original).
-
-## Estratégia de migração futura para multi-tenant (SaaS)
-
-O sistema foi construído inicialmente para **uma única barbearia**, mas a
-arquitetura já evita decisões que bloqueiem uma evolução futura para
-multi-tenant:
-
-1. Todas as entidades de negócio (Client, Barber, Service, Appointment,
-   CashbookEntry, etc.) já são referenciadas por IDs próprios (cuid), não
-   por chaves compostas — facilita adicionar uma coluna `barbershopId`
-   posteriormente sem quebrar relacionamentos existentes.
-2. Quando necessário, adicionar:
-   - Model `Barbershop` (nome, slug, domínio customizado, configurações).
-   - Coluna `barbershopId` (indexada) nas tabelas de negócio listadas acima.
-   - Middleware do Prisma (`$use`) ou wrapper de repository para injetar
-     automaticamente `barbershopId` em toda query, evitando vazamento de
-     dados entre tenants.
-   - Ajustar `Setting` para ser por barbearia (`barbershopId + key` como
-     unique compartilhado), em vez de global.
-3. RBAC já é orientado a roles/permissions genéricas — basta vincular
-   `UserRole` também a um `barbershopId` para suportar um mesmo usuário
-   com papéis diferentes em barbearias diferentes.
-4. `StorageProvider` já isola armazenamento por `folder` — usar
-   `barbershopId` como prefixo de pasta evita colisão de arquivos entre
-   tenants.
-
-## Próximos passos (recomendado no Claude Code)
-
-Este scaffold cobre: schema completo do MySQL, RBAC ponta a ponta, design
-system inicial e o módulo `appointments` como referência funcional
-completa (schema → action → service transacional com checagem de conflito
-→ repository). Para continuar, com um MySQL real disponível:
-
-1. `npm install` e rodar migrations/seed (instruções acima).
-2. Implementar CRUDs dos demais módulos seguindo o padrão de
-   `appointments` (cada módulo já tem seu `README.md` com o escopo).
-3. Construir as páginas do App Router (login, dashboard, clientes,
-   barbeiros, serviços, agenda, financeiro, relatórios, mensagens,
-   usuários, permissões, configurações, área do cliente — 20 páginas,
-   ver especificação original).
-4. Integrar provedor real de WhatsApp/SMS (WhatsApp Business API, Twilio,
-   Zenvia ou MessageBird) no módulo `messages`.
-5. Escrever os testes Vitest/Playwright priorizados na especificação.
