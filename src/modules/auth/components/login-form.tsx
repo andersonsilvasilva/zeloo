@@ -9,6 +9,18 @@ import { Input } from "@/components/ui/input";
 import { loginSchema, type LoginInput } from "@/modules/auth/schemas/login.schema";
 import { loginAction } from "@/modules/auth/actions/login.action";
 
+/**
+ * Só aceita caminhos relativos ("/algo") como destino pós-login — nunca uma
+ * URL absoluta ou protocol-relative ("//host/..."), que o router.push trata
+ * incorretamente (gera uma URL malformada) e é um vetor clássico de open
+ * redirect se algum dia vier de um link controlado por terceiros.
+ */
+function getSafeCallbackUrl(raw: string | null): string {
+  if (!raw) return "/";
+  if (!raw.startsWith("/") || raw.startsWith("//")) return "/";
+  return raw;
+}
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,8 +43,7 @@ export function LoginForm() {
       return;
     }
 
-    const callbackUrl = searchParams.get("callbackUrl") ?? "/";
-    router.push(callbackUrl);
+    router.push(getSafeCallbackUrl(searchParams.get("callbackUrl")));
     router.refresh();
   };
 

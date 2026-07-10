@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { LogoUploadError, SettingsService } from "@/modules/settings/services/settings.service";
@@ -28,6 +29,7 @@ export async function updateLogoAction(formData: FormData) {
   try {
     const service = new SettingsService();
     const settings = await service.updateLogo({ buffer, originalName: file.name, mimeType: file.type });
+    revalidatePath("/", "layout");
     return { success: true as const, settings };
   } catch (error) {
     if (error instanceof LogoUploadError) {

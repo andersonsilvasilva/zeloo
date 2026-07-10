@@ -28,5 +28,10 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|uploads).*)"],
+  // Ícones/imagens de compartilhamento (favicon, apple-icon, OG/Twitter image)
+  // precisam ficar fora da autenticação — robôs de preview do WhatsApp/redes
+  // sociais não têm sessão e não conseguiriam buscá-los.
+  matcher: [
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|opengraph-image.png|twitter-image.png|uploads).*)",
+  ],
 };
