@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Scissors } from "lucide-react";
+import { Check, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { formatCurrency } from "@/lib/utils/format";
@@ -36,28 +36,39 @@ export function SelectionForm({ barbers, services }: SelectionFormProps) {
         {barbers.length === 0 ? (
           <p className="text-sm text-booking-text-secondary">Nenhum profissional disponível no momento.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
-            {barbers.map((barber) => (
-              <button
-                key={barber.id}
-                type="button"
-                onClick={() => setBarberId(barber.id)}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus-gold",
-                  barberId === barber.id
-                    ? "bg-booking-primary text-booking-bg"
-                    : "border border-booking-border text-booking-text hover:border-booking-primary",
-                )}
-              >
-                {barber.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={barber.photoUrl} alt={barber.professionalName} className="h-6 w-6 rounded-full object-cover" />
-                ) : (
-                  <Scissors size={14} />
-                )}
-                {barber.professionalName}
-              </button>
-            ))}
+          <div className="flex flex-wrap gap-3">
+            {barbers.map((barber) => {
+              const selected = barberId === barber.id;
+              return (
+                <button
+                  key={barber.id}
+                  type="button"
+                  onClick={() => setBarberId(barber.id)}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full py-2 pl-2 pr-4 text-sm font-semibold transition-all focus-gold",
+                    selected
+                      ? "scale-[1.03] bg-booking-primary text-booking-bg shadow-[0_6px_16px_-4px_rgba(232,185,35,0.6)]"
+                      : "border border-booking-border text-booking-text hover:border-booking-primary",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full",
+                      selected ? "bg-booking-bg/20" : "bg-black/20",
+                    )}
+                  >
+                    {barber.photoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={barber.photoUrl} alt={barber.professionalName} className="h-full w-full object-cover" />
+                    ) : (
+                      <Scissors size={14} />
+                    )}
+                  </span>
+                  {barber.professionalName}
+                  {selected && <Check size={14} strokeWidth={3} />}
+                </button>
+              );
+            })}
           </div>
         )}
       </section>
@@ -76,14 +87,33 @@ export function SelectionForm({ barbers, services }: SelectionFormProps) {
                   type="button"
                   onClick={() => toggleService(service.id)}
                   className={cn(
-                    "w-full rounded-xl bg-booking-card px-4 py-3 text-left text-booking-card-foreground transition-shadow focus-gold",
-                    selected ? "ring-2 ring-booking-primary" : "opacity-90 hover:opacity-100",
+                    "relative flex w-full items-center gap-3 rounded-xl bg-booking-card p-3 text-left text-booking-card-foreground transition-all focus-gold",
+                    selected
+                      ? "scale-[1.02] shadow-[0_0_0_2px_#E8B923,0_8px_20px_-6px_rgba(232,185,35,0.5)]"
+                      : "opacity-90 hover:opacity-100 hover:shadow-[0_0_0_1px_rgba(232,185,35,0.4)]",
                   )}
                 >
-                  <p className="font-semibold">{service.name}</p>
-                  <p className="mt-1 text-sm">
-                    Valor: {formatCurrency(service.price)} · Tempo: {service.durationMinutes}min
-                  </p>
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-black/10">
+                    {service.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={service.imageUrl} alt={service.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <Scissors size={22} className="text-booking-card-foreground/50" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold">{service.name}</p>
+                    <p className="mt-1 text-sm opacity-80">
+                      {formatCurrency(service.price)} · {service.durationMinutes}min
+                    </p>
+                  </div>
+
+                  {selected && (
+                    <span className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-booking-primary text-booking-bg shadow">
+                      <Check size={14} strokeWidth={3} />
+                    </span>
+                  )}
                 </button>
               );
             })}
