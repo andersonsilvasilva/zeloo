@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils/format";
+import { sendWhatsAppTemplateMessage } from "@/lib/whatsapp/whatsapp-client";
 import {
   MessageRepository,
   type AppointmentWithRelations,
@@ -55,14 +56,21 @@ export class NoDefaultTemplateError extends Error {
   }
 }
 
+export class ClientPhoneMissingError extends Error {
+  constructor() {
+    super("Este cliente não tem WhatsApp/telefone cadastrado.");
+    this.name = "ClientPhoneMissingError";
+  }
+}
+
 /** Placeholders que dependem de um agendamento vinculado (ver {{clientName}}, sempre disponível). */
 const APPOINTMENT_PLACEHOLDERS = ["{{barber_agendado}}", "{{resumo_agendamento}}"];
 
 /**
  * Regras de negócio de mensagens (templates + envio + histórico).
- * O envio real a um provedor (WhatsApp Business API / Twilio / Zenvia) ainda
- * não está integrado — ver README do módulo. Por ora, `sendMessage` simula o
- * envio criando o registro de histórico já como SENT.
+ * Canal WHATSAPP envia de verdade via WhatsApp Cloud API (ver
+ * lib/whatsapp/whatsapp-client.ts); SMS (Twilio/Zenvia) ainda não está
+ * integrado e continua apenas registrando o histórico como SENT.
  */
 export class MessageService {
   async listTemplates(filters: ListTemplatesInput): Promise<MessageTemplateItem[]> {
@@ -137,12 +145,21 @@ export class MessageService {
 
     const content = this.renderTemplate(template.content, client.name, appointment);
 
+    let providerRef: string | undefined;
+    if (template.channel === "WHATSAPP") {
+      const to = client.whatsapp || client.phone;
+      if (!to) throw new ClientPhoneMissingError();
+      const result = await sendWhatsAppTemplateMessage({ to });
+      providerRef = result.providerRef;
+    }
+
     const log = await repo.createLog({
       client: { connect: { id: client.id } },
       template: { connect: { id: template.id } },
       channel: template.channel,
       content,
       status: "SENT",
+      providerRef,
       sentBy: { connect: { id: userId } },
     });
 

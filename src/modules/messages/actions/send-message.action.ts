@@ -7,9 +7,11 @@ import {
   AppointmentNotFoundError,
   AppointmentRequiredError,
   ClientNotFoundError,
+  ClientPhoneMissingError,
   MessageService,
   TemplateNotFoundError,
 } from "@/modules/messages/services/message.service";
+import { WhatsAppSendError } from "@/lib/whatsapp/whatsapp-client";
 
 export async function sendMessageAction(rawInput: SendMessageInput) {
   const userId = await requireUserId();
@@ -26,7 +28,9 @@ export async function sendMessageAction(rawInput: SendMessageInput) {
       error instanceof TemplateNotFoundError ||
       error instanceof ClientNotFoundError ||
       error instanceof AppointmentNotFoundError ||
-      error instanceof AppointmentRequiredError
+      error instanceof AppointmentRequiredError ||
+      error instanceof ClientPhoneMissingError ||
+      error instanceof WhatsAppSendError
     ) {
       return { success: false as const, error: error.message };
     }

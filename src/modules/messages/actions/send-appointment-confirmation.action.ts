@@ -5,10 +5,12 @@ import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import {
   AppointmentNotFoundError,
+  ClientPhoneMissingError,
   MessageService,
   NoDefaultTemplateError,
   TemplateNotFoundError,
 } from "@/modules/messages/services/message.service";
+import { WhatsAppSendError } from "@/lib/whatsapp/whatsapp-client";
 
 const schema = z.object({ appointmentId: z.string().cuid() });
 
@@ -27,7 +29,9 @@ export async function sendAppointmentConfirmationAction(rawInput: { appointmentI
     if (
       error instanceof NoDefaultTemplateError ||
       error instanceof AppointmentNotFoundError ||
-      error instanceof TemplateNotFoundError
+      error instanceof TemplateNotFoundError ||
+      error instanceof ClientPhoneMissingError ||
+      error instanceof WhatsAppSendError
     ) {
       return { success: false as const, error: error.message };
     }

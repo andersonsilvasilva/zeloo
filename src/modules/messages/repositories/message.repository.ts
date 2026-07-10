@@ -63,7 +63,10 @@ export class MessageRepository {
   }
 
   async findClientById(id: string) {
-    return this.db.client.findUnique({ where: { id }, select: { id: true, name: true, phone: true } });
+    return this.db.client.findUnique({
+      where: { id },
+      select: { id: true, name: true, phone: true, whatsapp: true },
+    });
   }
 
   async listActiveClientsForSelect() {
