@@ -9,6 +9,8 @@ export const SETTINGS_KEYS = {
   address: "barbershop.address",
   timezone: "barbershop.timezone",
   logoMediaId: "barbershop.logo_media_id",
+  instagram: "barbershop.instagram",
+  facebook: "barbershop.facebook",
 } as const;
 
 export const DEFAULT_TIMEZONE = "America/Sao_Paulo";
@@ -40,6 +42,20 @@ export const generalSettingsSchema = z.object({
     .refine((v) => v === "" || z.string().email().safeParse(v).success, { message: "E-mail inválido." }),
   address: z.string().trim().max(300).optional().default(""),
   timezone: z.string().refine((v) => TIMEZONE_VALUES.has(v), { message: "Selecione um fuso horário válido." }),
+  instagram: z
+    .string()
+    .trim()
+    .max(300)
+    .optional()
+    .default("")
+    .refine((v) => v === "" || z.string().url().safeParse(v).success, { message: "Link do Instagram inválido." }),
+  facebook: z
+    .string()
+    .trim()
+    .max(300)
+    .optional()
+    .default("")
+    .refine((v) => v === "" || z.string().url().safeParse(v).success, { message: "Link do Facebook inválido." }),
 });
 
 export type GeneralSettingsInput = z.infer<typeof generalSettingsSchema>;

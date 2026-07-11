@@ -12,6 +12,8 @@ const TEXT_KEYS = [
   SETTINGS_KEYS.address,
   SETTINGS_KEYS.timezone,
   SETTINGS_KEYS.logoMediaId,
+  SETTINGS_KEYS.instagram,
+  SETTINGS_KEYS.facebook,
 ];
 
 export class LogoUploadError extends Error {
@@ -51,6 +53,8 @@ export class SettingsService {
       email: map[SETTINGS_KEYS.email] ?? "",
       address: map[SETTINGS_KEYS.address] ?? "",
       timezone: map[SETTINGS_KEYS.timezone] || DEFAULT_TIMEZONE,
+      instagram: map[SETTINGS_KEYS.instagram] ?? "",
+      facebook: map[SETTINGS_KEYS.facebook] ?? "",
       logoUrl,
     };
   }
@@ -64,6 +68,8 @@ export class SettingsService {
       { key: SETTINGS_KEYS.email, value: input.email ?? "" },
       { key: SETTINGS_KEYS.address, value: input.address ?? "" },
       { key: SETTINGS_KEYS.timezone, value: input.timezone },
+      { key: SETTINGS_KEYS.instagram, value: input.instagram ?? "" },
+      { key: SETTINGS_KEYS.facebook, value: input.facebook ?? "" },
     ]);
 
     return this.getGeneralSettings();

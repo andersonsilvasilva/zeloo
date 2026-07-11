@@ -34,6 +34,8 @@ export function GeneralSettingsForm({ initialSettings }: { initialSettings: Gene
       email: initialSettings.email,
       address: initialSettings.address,
       timezone: initialSettings.timezone,
+      instagram: initialSettings.instagram,
+      facebook: initialSettings.facebook,
     },
   });
 
@@ -88,6 +90,20 @@ export function GeneralSettingsForm({ initialSettings }: { initialSettings: Gene
         <Label htmlFor="address">Endereço</Label>
         <Textarea id="address" rows={2} placeholder="Rua Exemplo, 123 — Centro" {...register("address")} />
         {errors.address && <p className="text-sm text-danger">{errors.address.message}</p>}
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1">
+          <Label htmlFor="instagram">Instagram</Label>
+          <Input id="instagram" type="url" placeholder="https://instagram.com/suabarbearia" {...register("instagram")} />
+          {errors.instagram && <p className="text-sm text-danger">{errors.instagram.message}</p>}
+        </div>
+
+        <div className="space-y-1">
+          <Label htmlFor="facebook">Facebook</Label>
+          <Input id="facebook" type="url" placeholder="https://facebook.com/suabarbearia" {...register("facebook")} />
+          {errors.facebook && <p className="text-sm text-danger">{errors.facebook.message}</p>}
+        </div>
       </div>
 
       <div className="space-y-1">

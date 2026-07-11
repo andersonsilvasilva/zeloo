@@ -5,5 +5,7 @@ export interface GeneralSettings {
   email: string;
   address: string;
   timezone: string;
+  instagram: string;
+  facebook: string;
   logoUrl: string | null;
 }
