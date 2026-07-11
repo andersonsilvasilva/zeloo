@@ -19,6 +19,12 @@ export const identifyClientSchema = z
 
 export type IdentifyClientInput = z.infer<typeof identifyClientSchema>;
 
+export const findExistingClientSchema = z.object({
+  phone: z.string().trim().min(8, "Informe um telefone válido.").max(30),
+});
+
+export type FindExistingClientInput = z.infer<typeof findExistingClientSchema>;
+
 export const publicAvailableSlotsSchema = z.object({
   barberId: z.string().cuid(),
   serviceIds: z.array(z.string().cuid()).min(1, "Selecione ao menos um serviço."),

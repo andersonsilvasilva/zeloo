@@ -5,6 +5,10 @@ export interface PublicBarberOption {
   photoUrl: string | null;
 }
 
+export interface PublicBarberProfile extends PublicBarberOption {
+  services: PublicServiceOption[];
+}
+
 export interface PublicServiceOption {
   id: string;
   name: string;

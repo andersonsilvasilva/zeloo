@@ -7,12 +7,24 @@ import { AppointmentService, AppointmentConflictError } from "@/modules/appointm
 import { autoSendAppointmentConfirmationAction } from "@/modules/messages/actions/auto-send-appointment-confirmation.action";
 import { BookingRepository } from "@/modules/booking/repositories/booking.repository";
 import type { IdentifyClientInput, CreatePublicAppointmentInput } from "@/modules/booking/schemas/booking.schema";
-import type { IdentifyClientResult, PublicBarberOption, PublicServiceOption } from "@/modules/booking/types/booking.types";
+import type {
+  IdentifyClientResult,
+  PublicBarberOption,
+  PublicBarberProfile,
+  PublicServiceOption,
+} from "@/modules/booking/types/booking.types";
 
 export class EmailAlreadyExistsError extends Error {
   constructor() {
     super("Já existe uma conta com este e-mail. Faça login em vez de criar uma nova conta.");
     this.name = "EmailAlreadyExistsError";
+  }
+}
+
+export class BarberNotFoundError extends Error {
+  constructor() {
+    super("Profissional não encontrado.");
+    this.name = "BarberNotFoundError";
   }
 }
 
@@ -48,6 +60,30 @@ export class BookingService {
       bio: b.bio,
       photoUrl: b.profileImage ? storage.getUrl(b.profileImage.storagePath) : null,
     }));
+  }
+
+  /** Perfil do profissional pra página `/agendar/profissional` — foto, bio e só os serviços que ele oferece. */
+  async getBarberProfile(barberId: string): Promise<PublicBarberProfile> {
+    const repo = new BarberRepository();
+    const barber = await repo.findActiveForPublicBookingById(barberId);
+    if (!barber) throw new BarberNotFoundError();
+
+    const storage = getStorageProvider();
+    return {
+      id: barber.id,
+      professionalName: barber.professionalName,
+      bio: barber.bio,
+      photoUrl: barber.profileImage ? storage.getUrl(barber.profileImage.storagePath) : null,
+      services: barber.services.map(({ service: s }) => ({
+        id: s.id,
+        name: s.name,
+        shortDescription: s.shortDescription,
+        price: s.price.toNumber(),
+        durationMinutes: s.durationMinutes,
+        category: s.category,
+        imageUrl: s.advertisingImage ? storage.getUrl(s.advertisingImage.storagePath) : null,
+      })),
+    };
   }
 
   async listServices(): Promise<PublicServiceOption[]> {

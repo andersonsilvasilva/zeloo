@@ -113,4 +113,33 @@ export class BarberRepository {
       orderBy: { professionalName: "asc" },
     });
   }
+
+  /** Perfil público de um profissional + os serviços ativos que ele oferece (página `/agendar/profissional`). */
+  async findActiveForPublicBookingById(id: string) {
+    return this.db.barber.findFirst({
+      where: { id, status: "ACTIVE" },
+      select: {
+        id: true,
+        professionalName: true,
+        bio: true,
+        profileImage: { select: { storagePath: true } },
+        services: {
+          where: { status: "ACTIVE", service: { status: "ACTIVE" } },
+          select: {
+            service: {
+              select: {
+                id: true,
+                name: true,
+                shortDescription: true,
+                price: true,
+                durationMinutes: true,
+                category: true,
+                advertisingImage: { select: { storagePath: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 }
