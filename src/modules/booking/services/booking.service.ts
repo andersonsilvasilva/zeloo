@@ -42,13 +42,6 @@ export class PhoneMismatchError extends Error {
   }
 }
 
-export class ClientProfileMissingError extends Error {
-  constructor() {
-    super("Sua conta não tem um perfil de cliente vinculado.");
-    this.name = "ClientProfileMissingError";
-  }
-}
-
 export class BookingService {
   async listBarbers(): Promise<PublicBarberOption[]> {
     const repo = new BarberRepository();
@@ -56,6 +49,7 @@ export class BookingService {
     const storage = getStorageProvider();
     return barbers.map((b) => ({
       id: b.id,
+      fullName: b.fullName,
       professionalName: b.professionalName,
       bio: b.bio,
       photoUrl: b.profileImage ? storage.getUrl(b.profileImage.storagePath) : null,
@@ -71,6 +65,7 @@ export class BookingService {
     const storage = getStorageProvider();
     return {
       id: barber.id,
+      fullName: barber.fullName,
       professionalName: barber.professionalName,
       bio: barber.bio,
       photoUrl: barber.profileImage ? storage.getUrl(barber.profileImage.storagePath) : null,
@@ -137,10 +132,17 @@ export class BookingService {
   }
 
   /**
-   * Com sessão (conta criada): resolve o cliente pela sessão, ignorando qualquer
-   * clientId enviado pelo formulário. Sem sessão: usa o clientId da URL, mas
-   * reconfere o telefone antes de confiar nele — barreira simples contra
-   * forjar o clientId de outra pessoa (ver plano do módulo booking).
+   * Com sessão de cliente (conta criada na identificação): resolve o cliente
+   * pela sessão, ignorando qualquer clientId enviado pelo formulário. Sem
+   * sessão de cliente: usa o clientId da URL, mas reconfere o telefone antes
+   * de confiar nele — barreira simples contra forjar o clientId de outra
+   * pessoa (ver plano do módulo booking).
+   *
+   * Importante: uma sessão pode existir sem ser "de cliente" — por exemplo,
+   * um administrador testando o `/agendar` no mesmo navegador onde já está
+   * logado no painel interno. Nesse caso não existe Client vinculado ao
+   * User da sessão, e o fluxo cai pro caminho anônimo (clientId + telefone)
+   * em vez de travar com "conta sem perfil de cliente".
    */
   async createAppointmentForBooking(
     input: CreatePublicAppointmentInput,
@@ -148,17 +150,22 @@ export class BookingService {
   ) {
     const repo = new BookingRepository();
 
+    const sessionClient = sessionUserId ? await repo.findClientByUserId(sessionUserId) : null;
+
     let clientId: string;
-    if (sessionUserId) {
-      const client = await repo.findClientByUserId(sessionUserId);
-      if (!client) throw new ClientProfileMissingError();
-      clientId = client.id;
+    if (sessionClient) {
+      clientId = sessionClient.id;
     } else {
       const client = await repo.findClientById(input.clientId);
       if (!client) throw new ClientNotFoundError();
       if (client.phone !== input.phone && client.whatsapp !== input.phone) throw new PhoneMismatchError();
       clientId = client.id;
     }
+
+    // Só atribui a criação à sessão quando ela de fato corresponde ao
+    // cliente do agendamento — nunca a uma sessão de staff sem relação com
+    // o Client resolvido acima.
+    const createdById = sessionClient ? (sessionUserId as string) : undefined;
 
     const appointmentService = new AppointmentService();
     const appointment = await appointmentService.create(
@@ -170,13 +177,14 @@ export class BookingService {
         serviceIds: input.serviceIds,
         notes: input.notes,
       },
-      sessionUserId ?? undefined,
+      createdById,
     );
 
-    // Confirmação automática por WhatsApp exige uma sessão (é atribuída a um
-    // usuário no histórico) — só é possível para quem criou conta na
-    // identificação. Sem conta, o cliente vê a confirmação só na tela final.
-    if (sessionUserId) {
+    // Confirmação automática por WhatsApp exige uma sessão de cliente (é
+    // atribuída a um usuário no histórico) — só é possível para quem criou
+    // conta na identificação. Sem conta, o cliente vê a confirmação só na
+    // tela final.
+    if (createdById) {
       await autoSendAppointmentConfirmationAction({ appointmentId: appointment.id }).catch(() => undefined);
     }
 

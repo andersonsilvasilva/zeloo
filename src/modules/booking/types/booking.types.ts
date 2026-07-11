@@ -1,5 +1,6 @@
 export interface PublicBarberOption {
   id: string;
+  fullName: string;
   professionalName: string;
   bio: string | null;
   photoUrl: string | null;

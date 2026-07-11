@@ -27,17 +27,33 @@ export function BarberProfile({ profile }: BarberProfileProps) {
 
   return (
     <div className="space-y-8">
-      <section className="flex flex-col items-center text-center">
-        <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-2 border-booking-primary bg-black/20">
+      <section className="relative overflow-hidden rounded-2xl border border-booking-border bg-gradient-to-b from-booking-primary/[0.07] to-transparent px-6 pb-7 pt-8 text-center">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-0 h-40 w-40 -translate-x-1/2 -translate-y-1/3 rounded-full bg-booking-primary/20 blur-3xl"
+        />
+
+        <div className="relative mx-auto flex h-32 w-32 items-center justify-center overflow-hidden rounded-full border-4 border-booking-primary bg-black/30 shadow-[0_0_40px_-8px_rgba(232,185,35,0.55)]">
           {profile.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={profile.photoUrl} alt={profile.professionalName} className="h-full w-full object-cover" />
           ) : (
-            <Scissors size={32} className="text-booking-primary" />
+            <Scissors size={36} className="text-booking-primary" />
           )}
         </div>
-        <h1 className="mt-4 text-xl font-semibold text-booking-text">{profile.professionalName}</h1>
-        {profile.bio && <p className="mt-2 max-w-sm text-sm text-booking-text-secondary">{profile.bio}</p>}
+
+        <h1 className="relative mt-5 text-2xl font-bold tracking-tight text-booking-text">
+          {profile.professionalName}
+        </h1>
+        {profile.fullName && profile.fullName !== profile.professionalName && (
+          <p className="relative mt-1 text-sm font-medium text-booking-text-secondary">{profile.fullName}</p>
+        )}
+
+        {profile.bio && (
+          <div className="relative mx-auto mt-5 max-w-md rounded-xl border border-booking-border bg-black/25 p-4">
+            <p className="text-sm leading-relaxed text-booking-text-secondary">{profile.bio}</p>
+          </div>
+        )}
       </section>
 
       <section>

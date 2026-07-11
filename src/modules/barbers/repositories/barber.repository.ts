@@ -106,6 +106,7 @@ export class BarberRepository {
       where: { status: "ACTIVE" },
       select: {
         id: true,
+        fullName: true,
         professionalName: true,
         bio: true,
         profileImage: { select: { storagePath: true } },
@@ -120,6 +121,7 @@ export class BarberRepository {
       where: { id, status: "ACTIVE" },
       select: {
         id: true,
+        fullName: true,
         professionalName: true,
         bio: true,
         profileImage: { select: { storagePath: true } },
