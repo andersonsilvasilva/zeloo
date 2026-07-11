@@ -113,8 +113,8 @@ export function SendMessageDialog({ options }: { options: MessageFormOptions }) 
           <DialogHeader>
             <DialogTitle>Enviar mensagem</DialogTitle>
             <DialogDescription>
-              Selecione o cliente e o modelo. O envio via WhatsApp/SMS ainda não está integrado a um provedor
-              real — a mensagem fica registrada no histórico.
+              Selecione o cliente e o modelo. WhatsApp é enviado de verdade pela API da Meta; SMS ainda não está
+              integrado a um provedor real — a mensagem fica registrada só no histórico.
             </DialogDescription>
           </DialogHeader>
 

@@ -2,9 +2,11 @@
  * Envio real via WhatsApp Cloud API (Meta). Fora da janela de 24h de uma
  * conversa iniciada pelo cliente, a Meta só aceita mensagens de "template"
  * pré-aprovado — por isso o envio aqui sempre usa `type: "template"`, nunca
- * texto livre. O nome/idioma do template são configuráveis via env porque
- * ainda não há um template de barbearia aprovado (ver WHATSAPP_TEMPLATE_NAME);
- * até lá, usamos o "hello_world" de exemplo só para validar a integração.
+ * texto livre. O nome/idioma do template são configuráveis via env
+ * (WHATSAPP_TEMPLATE_NAME/WHATSAPP_TEMPLATE_LANGUAGE); até o template de
+ * confirmação de agendamento ("confirmacao_agendamento", pt_BR, submetido
+ * pra aprovação da Meta em 2026-07-11) ser aprovado, o padrão continua
+ * sendo o "hello_world" de exemplo, que não aceita variáveis.
  */
 
 export class WhatsAppSendError extends Error {
@@ -27,13 +29,34 @@ function normalizePhoneNumber(raw: string): string {
   return digits.startsWith("55") ? digits : `55${digits}`;
 }
 
-export async function sendWhatsAppTemplateMessage(params: { to: string }): Promise<{ providerRef: string }> {
+export async function sendWhatsAppTemplateMessage(params: {
+  to: string;
+  /** Valores, em ordem, para as variáveis {{1}}, {{2}}... do corpo do template ativo. */
+  parameters?: string[];
+}): Promise<{ providerRef: string }> {
   const token = process.env.WHATSAPP_BUSINESS_API_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
   if (!token || !phoneNumberId) throw new WhatsAppNotConfiguredError();
 
   const templateName = process.env.WHATSAPP_TEMPLATE_NAME || "hello_world";
   const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || "en_US";
+
+  const template: { name: string; language: { code: string }; components?: unknown[] } = {
+    name: templateName,
+    language: { code: languageCode },
+  };
+
+  // "hello_world" (template de exemplo, sem variáveis) quebraria se
+  // recebesse parâmetros — só inclui components quando um template real
+  // (com variáveis no corpo) estiver configurado.
+  if (templateName !== "hello_world" && params.parameters && params.parameters.length > 0) {
+    template.components = [
+      {
+        type: "body",
+        parameters: params.parameters.map((text) => ({ type: "text", text })),
+      },
+    ];
+  }
 
   const response = await fetch(`https://graph.facebook.com/v20.0/${phoneNumberId}/messages`, {
     method: "POST",
@@ -45,7 +68,7 @@ export async function sendWhatsAppTemplateMessage(params: { to: string }): Promi
       messaging_product: "whatsapp",
       to: normalizePhoneNumber(params.to),
       type: "template",
-      template: { name: templateName, language: { code: languageCode } },
+      template,
     }),
   });
 

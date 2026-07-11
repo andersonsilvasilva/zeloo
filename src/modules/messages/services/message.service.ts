@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils/format";
 import { sendWhatsAppTemplateMessage } from "@/lib/whatsapp/whatsapp-client";
+import { SettingsService } from "@/modules/settings/services/settings.service";
 import {
   MessageRepository,
   type AppointmentWithRelations,
@@ -149,7 +150,22 @@ export class MessageService {
     if (template.channel === "WHATSAPP") {
       const to = client.whatsapp || client.phone;
       if (!to) throw new ClientPhoneMissingError();
-      const result = await sendWhatsAppTemplateMessage({ to });
+
+      // Variáveis {{1}}..{{5}} do template "confirmacao_agendamento" — só
+      // fazem sentido quando há um agendamento vinculado ao envio.
+      let parameters: string[] | undefined;
+      if (appointment) {
+        const settings = await new SettingsService().getGeneralSettings();
+        parameters = [
+          client.name,
+          settings.name,
+          format(appointment.startTime, "dd/MM/yyyy 'às' HH:mm"),
+          appointment.barber.professionalName,
+          appointment.services.map((s) => s.service.name).join(", "),
+        ];
+      }
+
+      const result = await sendWhatsAppTemplateMessage({ to, parameters });
       providerRef = result.providerRef;
     }
 
