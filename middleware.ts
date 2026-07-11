@@ -22,7 +22,13 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (req.auth && pathname === "/login") {
+  // Só em navegação real (GET) — se aplicasse a POSTs, interceptaria a
+  // própria Server Action de login (loginAction, que faz POST em /login).
+  // O Next.js em modo standalone trata redirect de middleware sobre uma
+  // Server Action tentando um self-fetch interno (http://0.0.0.0:<porta>)
+  // que essa hospedagem (Passenger) não expõe — trava com
+  // "failed to forward action response" / ECONNREFUSED, travando o login.
+  if (req.auth && pathname === "/login" && req.method === "GET") {
     return NextResponse.redirect(new URL("/", req.nextUrl.origin));
   }
 });
