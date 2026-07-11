@@ -1,8 +1,8 @@
-# Config do Passenger para a hospedagem Node.js da Hostinger (conta u357370739).
-# Precisa ficar versionado: o auto-deploy via Git da Hostinger limpa arquivos
-# não rastreados em public_html a cada push, o que já apagou uma cópia
-# criada manualmente por SSH.
-PassengerAppRoot "/home/u357370739/domains/antiquewhite-monkey-653527.hostingersite.com/public_html/app_deploy"
+# Config do Passenger para a hospedagem Node.js da Hostinger (conta u645926326,
+# dominio barbearia-io.com.br — migrado em 2026-07-11, ver README).
+# Versionado como referência/backup do valor correto: o deploy real é manual
+# (build local + upload), não via auto-deploy Git.
+PassengerAppRoot "/home/u645926326/domains/barbearia-io.com.br/public_html/app_deploy"
 PassengerBaseURI "/"
 PassengerNodejs "/opt/alt/alt-nodejs20/root/usr/bin/node"
 PassengerAppType node

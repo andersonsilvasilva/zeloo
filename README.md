@@ -20,7 +20,7 @@ Aplicação web full-stack para gestão operacional, financeira e comercial de u
 [![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Deploy](https://img.shields.io/badge/deploy-Hostinger_(Node.js)-673DE6?style=flat-square&logo=hostinger&logoColor=white)](#-deploy-em-produção)
-[![Status](https://img.shields.io/badge/status-em_produção-success?style=flat-square)](#)
+[![Status](https://img.shields.io/badge/status-em_produção-success?style=flat-square)](https://barbearia-io.com.br)
 [![License](https://img.shields.io/badge/license-privado-red?style=flat-square)](#-licença)
 
 </div>
@@ -65,14 +65,14 @@ O projeto tem **duas frentes**:
 
 ### Vitrine pública de agendamento (`/agendar`)
 - Landing com logomarca, nome da barbearia e mensagem de marketing configuráveis
-- Escolha de barbeiro + serviço(s) numa única tela, com foto, preço e duração
-- Identificação rápida por nome + telefone (sem senha) — ou criação de conta opcional (e-mail + senha) para acompanhar o histórico depois
+- Escolha do barbeiro, seguida de uma página de perfil dele (foto, bio e só os serviços que ele especificamente oferece, com preço e duração)
+- Identificação rápida por nome + telefone (sem senha) — com busca automática de cadastro existente pelo telefone (mostra o nome encontrado para o visitante confirmar) — ou criação de conta opcional (e-mail + senha) para acompanhar o histórico depois
 - Calendário com disponibilidade em tempo real (reaproveita a mesma lógica de conflito de horário do painel interno) e seleção de horário
 - Confirmação com resumo e valor total, com auto-envio de confirmação por WhatsApp quando aplicável
 
 ### Painel interno
 - **Dashboard** com indicadores do dia/semana/mês/ano, gráficos de faturamento e distribuição de serviços, relógio digital ao vivo com a agenda do dia e box de aniversariantes (hoje/semana/mês)
-- **Agenda**: CRUD completo de agendamentos com checagem automática de conflito de horário, fluxo de status (`Pendente → Confirmado → Em atendimento → Concluído`, com `Cancelado`/`Não compareceu`), reagendamento e atalho para registrar pagamento direto na lista
+- **Agenda**: CRUD completo de agendamentos com checagem automática de conflito de horário, fluxo de status (`Pendente → Confirmado → Em atendimento → Concluído`, com `Cancelado`/`Não compareceu`), reagendamento, atalho para registrar pagamento direto na lista e exclusão definitiva restrita ao Administrador (bloqueada se já houver pagamento registrado)
 - **Clientes**, **Barbeiros** e **Serviços**: CRUD completo com upload de fotos (thumbnail/média/grande gerados automaticamente)
 - **Financeiro**: abertura/fechamento de caixa, livro-caixa (entradas/saídas), registro de pagamentos e **Balancete débito/crédito** por categoria, com impressão/exportação em PDF
 - **Relatórios**: indicadores por período customizável (diferente dos buckets fixos do dashboard), com impressão/exportação em PDF — barbeiros veem automaticamente só os próprios números
@@ -221,6 +221,7 @@ O envio de mensagens (confirmação automática de agendamento, modelos manuais)
 Pontos de atenção:
 - Fora da janela de 24h de uma conversa iniciada pelo cliente, a Meta só aceita mensagens de **template pré-aprovado** — configure `WHATSAPP_TEMPLATE_NAME`/`WHATSAPP_TEMPLATE_LANGUAGE` com um template aprovado no [Meta Business Manager](https://business.facebook.com/).
 - Números de teste precisam estar na lista de destinatários autorizados enquanto o app estiver em modo de desenvolvimento na Meta.
+- Template próprio `confirmacao_agendamento` (pt_BR, categoria UTILITY) submetido para aprovação em 2026-07-11, com variáveis para nome do cliente, nome da barbearia, data/hora, barbeiro e serviços — `sendWhatsAppTemplateMessage` já monta e envia esses valores quando o template ativo não é o `hello_world` de exemplo.
 
 ---
 
@@ -234,17 +235,28 @@ Prioridades sugeridas: login e permissões, CRUD de cliente/barbeiro/serviço, a
 
 ## 📦 Deploy em produção
 
-Aplicação em produção rodando como **Node.js standalone** via **Phusion Passenger** (hospedagem compartilhada Hostinger, sem seletor de Node.js no painel — runtime acessado diretamente via `/opt/alt/alt-nodejs20`).
+Aplicação em produção em **https://barbearia-io.com.br**, rodando como **Node.js standalone** via **Phusion Passenger** (hospedagem compartilhada Hostinger, sem seletor de Node.js no painel — runtime acessado diretamente via `/opt/alt/alt-nodejs20`). Migrado da hospedagem original em 2026-07-11 (mesma arquitetura, conta/servidor diferentes).
+
+O deploy é **manual** (build local + upload), não automatizado via Git:
 
 ```bash
 npm run build   # gera .next/standalone (output: "standalone" no next.config.js)
+# copia .next/static e public/ para dentro de .next/standalone
+# empacota (.tar.gz) e envia por scp/FTP para o servidor
+# extrai em app_deploy/, restaura .env e public/uploads do servidor
+# chmod +x nos binários do Prisma, toca app_deploy/tmp/restart.txt
 ```
 
 Pontos específicos desse ambiente (documentados para reprodutibilidade):
 
-- `.htaccess` com as diretivas do Passenger é **versionado no repositório** — a hospedagem faz auto-deploy via Git a cada push e limpa arquivos não versionados em `public_html`, o que já apagou uma cópia criada manualmente.
+- `.htaccess` com as diretivas do Passenger é **versionado no repositório** como referência do valor correto (caminho `PassengerAppRoot`, versão do Node) — mas precisa ser recriado manualmente em `public_html/` na hospedagem, já que não há auto-deploy via Git ativo.
+- **Nunca sobrescrever `public/uploads/` do servidor com a pasta local** — é gitignored e só tem arquivos de teste localmente; todo deploy precisa fazer backup do `app_deploy/public/uploads` do servidor antes de extrair o novo pacote, e restaurar depois (mesmo padrão já usado para o `.env`).
+- Páginas públicas estáticas (`/login`, `/agendar`, `/agendar/escolher`) recebem `Cache-Control: no-store` via `headers()` em `next.config.js` — sem isso, o CDN da Hostinger cacheia o HTML por 1 ano e visitantes recebem chunks JS/CSS já apagados após um redeploy. **Não usar `force-dynamic`** como alternativa: essa hospedagem trava com `EAGAIN` do Prisma sob esse padrão de carga.
+- `middleware.ts` não faz nenhum redirect (`NextResponse.redirect()` em middleware, nesse ambiente Passenger, trava a requisição — bug do Next.js em `output: standalone`). O controle de acesso por autenticação é feito via `redirect()` do `next/navigation` em `app/(app)/layout.tsx`.
+- `sharp` precisa do binário `linux-x64` explícito ao buildar no Windows (`npm install --no-save --force @img/sharp-linux-x64@<versão> @img/sharp-libvips-linux-x64@<versão>` antes do build) — só o binário `win32-x64` fica no `node_modules` local por padrão, e o app quebra em qualquer rota que use upload de imagem.
 - `engineType = "binary"` no `generator client` do Prisma — o engine `library` (addon nativo embutido) trava com `PANIC: timer has gone away` no sandbox da hospedagem; o engine binário (processo separado) contorna a restrição.
 - O build (`next build`) não roda de forma confiável direto no servidor compartilhado (o compilador SWC/Rust esbarra em restrições de processos do sandbox) — o build é feito localmente e o pacote (`.next/standalone` + `.next/static` + `public/`) é enviado pronto.
+- Erro 503 com `Assertion failed: uv_thread_create` no log é esgotamento de threads da conta (limite de recursos do plano) — não tem solução via código, precisa aumentar recursos da hospedagem.
 
 ---
 
@@ -281,7 +293,7 @@ prisma/
 ## 🗺️ Roadmap
 
 - [ ] Suíte de testes automatizados (Vitest + Playwright já instalados, faltam os testes em si)
-- [ ] Templates de WhatsApp aprovados na Meta específicos da barbearia (hoje usa o template de exemplo `hello_world` para validar a integração)
+- [ ] Aguardando aprovação da Meta do template `confirmacao_agendamento` (pt_BR, categoria UTILITY, submetido em 2026-07-11) — código já pronto para usá-lo assim que `WHATSAPP_TEMPLATE_NAME` for atualizado; até lá continua no `hello_world` de exemplo
 - [ ] Cancelamento/consulta de agendamento pelo próprio cliente via `/agendar` (link "Ver/cancelar agendamento")
 - [ ] Migração de armazenamento local para S3/R2 (interface `StorageProvider` já preparada)
 - [ ] Estratégia multi-tenant (suportar múltiplas barbearias na mesma base — ver anotações de arquitetura no código)
