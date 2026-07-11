@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils/format";
+import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { AppointmentStatusBadge } from "@/modules/appointments/components/appointment-status-badge";
 import { AppointmentFormDialog } from "@/modules/appointments/components/appointment-form-dialog";
 import { updateAppointmentStatusAction } from "@/modules/appointments/actions/update-appointment-status.action";
@@ -49,6 +49,7 @@ export interface AppointmentListProps {
   canSendMessages: boolean;
   canRegisterPayment: boolean;
   canDelete: boolean;
+  timezone: string;
 }
 
 export function AppointmentList({
@@ -59,6 +60,7 @@ export function AppointmentList({
   canSendMessages,
   canRegisterPayment,
   canDelete,
+  timezone,
 }: AppointmentListProps) {
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -134,7 +136,8 @@ export function AppointmentList({
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium text-text">
-                      {formatDateOnlyBR(appointment.appointmentDate)} às {format(appointment.startTime, "HH:mm")}
+                      {formatDateOnlyBR(appointment.appointmentDate)} às{" "}
+                      {formatInBarbershopTz(appointment.startTime, timezone, "HH:mm")}
                     </span>
                     <AppointmentStatusBadge status={appointment.status} />
                     {appointment.status === "COMPLETED" && !appointment.hasPayment && (

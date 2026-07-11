@@ -1,13 +1,14 @@
-import { format } from "date-fns";
 import { hasPermission } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { ComingSoon } from "@/components/shared/coming-soon";
 import { listAppointmentsAction } from "@/modules/appointments/actions/list-appointments.action";
 import { getAppointmentFormOptionsAction } from "@/modules/appointments/actions/get-appointment-form-options.action";
+import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 import { AppointmentFilters } from "@/modules/appointments/components/appointment-filters";
 import { AppointmentList } from "@/modules/appointments/components/appointment-list";
 import { NewAppointmentButton } from "@/modules/appointments/components/new-appointment-button";
-import { parseDateOnly } from "@/modules/appointments/utils/date-only";
+import { formatDateOnly, parseDateOnly } from "@/modules/appointments/utils/date-only";
+import { todayInTimezone } from "@/lib/utils/timezone";
 import type { AppointmentStatus } from "@/modules/appointments/types/appointment.types";
 
 export default async function AgendaPage({
@@ -27,7 +28,8 @@ export default async function AgendaPage({
     hasPermission(PERMISSIONS.appointments.delete),
   ]);
 
-  const date = searchParams.date || format(new Date(), "yyyy-MM-dd");
+  const settings = await getGeneralSettingsAction();
+  const date = searchParams.date || formatDateOnly(todayInTimezone(settings.timezone));
   const barberId = searchParams.barberId || "";
   const status = searchParams.status || "";
   const selectedDate = parseDateOnly(date);
@@ -62,6 +64,7 @@ export default async function AgendaPage({
         canSendMessages={canSendMessages}
         canRegisterPayment={canRegisterPayment}
         canDelete={canDelete}
+        timezone={settings.timezone}
       />
     </div>
   );

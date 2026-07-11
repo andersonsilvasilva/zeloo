@@ -26,6 +26,7 @@ export interface AppointmentFormOptions {
   services: ServiceOption[];
   barbers: BarberOption[];
   clients: ClientOption[];
+  timezone: string;
 }
 
 export interface TimeSlot {

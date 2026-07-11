@@ -1,7 +1,7 @@
 "use client";
 
-import { format } from "date-fns";
 import { cn } from "@/lib/utils/cn";
+import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import type { TimeSlot } from "@/modules/appointments/types/appointment.types";
 
 export interface TimeSlotPickerProps {
@@ -9,9 +9,10 @@ export interface TimeSlotPickerProps {
   selected: Date | null;
   onSelect: (slot: TimeSlot) => void;
   loading: boolean;
+  timezone: string;
 }
 
-export function TimeSlotPicker({ slots, selected, onSelect, loading }: TimeSlotPickerProps) {
+export function TimeSlotPicker({ slots, selected, onSelect, loading, timezone }: TimeSlotPickerProps) {
   if (loading) {
     return <p className="text-sm text-text-secondary">Carregando horários...</p>;
   }
@@ -46,7 +47,7 @@ export function TimeSlotPicker({ slots, selected, onSelect, loading }: TimeSlotP
               isSelected && "border-primary bg-primary text-primary-foreground",
             )}
           >
-            {format(slot.start, "HH:mm")}
+            {formatInBarbershopTz(slot.start, timezone, "HH:mm")}
           </button>
         );
       })}

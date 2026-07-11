@@ -1,10 +1,10 @@
-import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
+import { zonedDateAndTimeToUtc, startOfZonedDay, todayInTimezone } from "@/lib/utils/timezone";
+import { SettingsService } from "@/modules/settings/services/settings.service";
 import {
   AppointmentRepository,
   type AppointmentWithRelations,
 } from "@/modules/appointments/repositories/appointment.repository";
-import { parseDateOnly } from "@/modules/appointments/utils/date-only";
 import type {
   CreateAppointmentInput,
   RescheduleAppointmentInput,
@@ -208,7 +208,8 @@ export class AppointmentService {
   async listToday(userId: string): Promise<AppointmentListItem[]> {
     const repo = new AppointmentRepository();
     const barber = await repo.findBarberIdByUserId(userId);
-    const today = parseDateOnly(format(new Date(), "yyyy-MM-dd"));
+    const timezone = await this.getTimezone();
+    const today = todayInTimezone(timezone);
 
     const appointments = await repo.list({ dateFrom: today, dateTo: today, barberId: barber?.id });
     return appointments
@@ -218,10 +219,11 @@ export class AppointmentService {
 
   async getFormOptions(): Promise<AppointmentFormOptions> {
     const repo = new AppointmentRepository();
-    const [services, barbers, clients] = await Promise.all([
+    const [services, barbers, clients, timezone] = await Promise.all([
       repo.listActiveServices(),
       repo.listActiveBarbersWithServices(),
       repo.listActiveClients(),
+      this.getTimezone(),
     ]);
 
     return {
@@ -237,6 +239,7 @@ export class AppointmentService {
         serviceIds: b.services.map((bs) => bs.serviceId),
       })),
       clients: clients.map((c) => ({ id: c.id, name: c.name, phone: c.phone })),
+      timezone,
     };
   }
 
@@ -248,9 +251,10 @@ export class AppointmentService {
   async getAvailableSlots(input: GetAvailableSlotsInput): Promise<TimeSlot[]> {
     const repo = new AppointmentRepository();
 
-    const [barber, services] = await Promise.all([
+    const [barber, services, timezone] = await Promise.all([
       repo.findBarberById(input.barberId),
       repo.findServicesByIds(input.serviceIds),
+      this.getTimezone(),
     ]);
 
     if (!barber || barber.status !== "ACTIVE") return [];
@@ -260,10 +264,9 @@ export class AppointmentService {
     const ranges = this.workingRangesFor(barber.workingHours, input.date);
     if (ranges.length === 0) return [];
 
-    const dayStart = new Date(input.date);
-    dayStart.setHours(0, 0, 0, 0);
+    const dayStart = startOfZonedDay(input.date, timezone);
     const dayEnd = new Date(dayStart);
-    dayEnd.setDate(dayEnd.getDate() + 1);
+    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
 
     const existing = await repo.findActiveAppointmentsForBarberOnDate(
       input.barberId,
@@ -276,8 +279,8 @@ export class AppointmentService {
     const slots: TimeSlot[] = [];
 
     for (const range of ranges) {
-      let cursor = this.combineDateAndTime(input.date, range.start);
-      const rangeEnd = this.combineDateAndTime(input.date, range.end);
+      let cursor = zonedDateAndTimeToUtc(input.date, range.start, timezone);
+      const rangeEnd = zonedDateAndTimeToUtc(input.date, range.end, timezone);
 
       while (cursor.getTime() + totalDuration * 60_000 <= rangeEnd.getTime()) {
         const slotEnd = new Date(cursor.getTime() + totalDuration * 60_000);
@@ -329,10 +332,8 @@ export class AppointmentService {
       });
   }
 
-  private combineDateAndTime(date: Date, time: string): Date {
-    const [hours, minutes] = time.split(":").map(Number);
-    const result = new Date(date);
-    result.setHours(hours, minutes, 0, 0);
-    return result;
+  private async getTimezone(): Promise<string> {
+    const settings = await new SettingsService().getGeneralSettings();
+    return settings.timezone;
   }
 }

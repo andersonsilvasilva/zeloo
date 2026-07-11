@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { format } from "date-fns";
 import { CheckCircle2 } from "lucide-react";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 import { formatCurrency } from "@/lib/utils/format";
 import { formatDateOnlyBR } from "@/modules/appointments/utils/date-only";
+import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { getPublicAppointmentSummaryAction } from "@/modules/booking/actions/get-public-appointment-summary.action";
 
@@ -51,7 +51,8 @@ export default async function SucessoPage({
             <div>
               <p className="text-xs uppercase tracking-wide opacity-70">Data e horário</p>
               <p className="font-semibold">
-                {formatDateOnlyBR(result.appointment.appointmentDate)} às {format(result.appointment.startTime, "HH:mm")}
+                {formatDateOnlyBR(result.appointment.appointmentDate)} às{" "}
+                {formatInBarbershopTz(result.appointment.startTime, settings.timezone, "HH:mm")}
               </p>
             </div>
             <div className="flex items-center justify-between border-t border-black/10 pt-3">

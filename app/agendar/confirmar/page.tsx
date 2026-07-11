@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { format } from "date-fns";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 import { formatCurrency } from "@/lib/utils/format";
 import { formatDateOnlyBR, parseDateOnly } from "@/modules/appointments/utils/date-only";
+import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { ConfirmButton } from "@/modules/booking/components/confirm-button";
 import { listPublicBarbersAction } from "@/modules/booking/actions/list-public-barbers.action";
@@ -60,7 +60,7 @@ export default async function ConfirmarPage({
         <div>
           <p className="text-xs uppercase tracking-wide opacity-70">Data e horário</p>
           <p className="font-semibold">
-            {formatDateOnlyBR(appointmentDate)} às {format(startTime, "HH:mm")}
+            {formatDateOnlyBR(appointmentDate)} às {formatInBarbershopTz(startTime, settings.timezone, "HH:mm")}
           </p>
         </div>
         <div className="flex items-center justify-between border-t border-black/10 pt-3">

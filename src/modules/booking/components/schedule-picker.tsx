@@ -18,6 +18,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import { formatDateOnly } from "@/modules/appointments/utils/date-only";
+import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { getPublicAvailableSlotsAction } from "@/modules/booking/actions/get-public-available-slots.action";
 import type { TimeSlot } from "@/modules/appointments/types/appointment.types";
 
@@ -28,9 +29,10 @@ export interface SchedulePickerProps {
   serviceIds: string;
   clientId: string;
   phone: string;
+  timezone: string;
 }
 
-export function SchedulePicker({ barberId, serviceIds, clientId, phone }: SchedulePickerProps) {
+export function SchedulePicker({ barberId, serviceIds, clientId, phone, timezone }: SchedulePickerProps) {
   const router = useRouter();
   const today = startOfDay(new Date());
 
@@ -157,7 +159,7 @@ export function SchedulePicker({ barberId, serviceIds, clientId, phone }: Schedu
                         isSelected ? "ring-2 ring-booking-primary" : "opacity-90 hover:opacity-100",
                       )}
                     >
-                      {format(slot.start, "HH:mm")}
+                      {formatInBarbershopTz(slot.start, timezone, "HH:mm")}
                     </button>
                   );
                 })}

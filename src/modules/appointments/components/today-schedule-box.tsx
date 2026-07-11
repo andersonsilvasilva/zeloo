@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Clock } from "lucide-react";
+import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { AppointmentStatusBadge } from "@/modules/appointments/components/appointment-status-badge";
 import type { AppointmentListItem } from "@/modules/appointments/types/appointment.types";
 
 export interface TodayScheduleBoxProps {
   appointments: AppointmentListItem[];
+  timezone: string;
 }
 
 /** Relógio digital "premium": mostrador estilo LCD embutido, atualiza a cada segundo. */
@@ -36,7 +38,7 @@ function LiveClock() {
   );
 }
 
-export function TodayScheduleBox({ appointments }: TodayScheduleBoxProps) {
+export function TodayScheduleBox({ appointments, timezone }: TodayScheduleBoxProps) {
   const showBarberName = new Set(appointments.map((a) => a.barber.id)).size > 1;
 
   return (
@@ -61,7 +63,7 @@ export function TodayScheduleBox({ appointments }: TodayScheduleBoxProps) {
               >
                 <div className="flex items-baseline gap-2">
                   <span className="font-mono text-sm font-semibold tabular-nums text-primary">
-                    {format(appointment.startTime, "HH:mm")}
+                    {formatInBarbershopTz(appointment.startTime, timezone, "HH:mm")}
                   </span>
                   <span className="text-sm text-text">{appointment.client.name}</span>
                   {showBarberName && (

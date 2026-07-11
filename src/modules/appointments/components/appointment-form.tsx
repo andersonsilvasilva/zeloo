@@ -242,7 +242,13 @@ export function AppointmentForm({ options, mode, appointmentId, defaultValues, o
 
       <div className="space-y-2">
         <Label>Horário</Label>
-        <TimeSlotPicker slots={slots} selected={selectedSlot?.start ?? null} onSelect={setSelectedSlot} loading={slotsLoading} />
+        <TimeSlotPicker
+          slots={slots}
+          selected={selectedSlot?.start ?? null}
+          onSelect={setSelectedSlot}
+          loading={slotsLoading}
+          timezone={options.timezone}
+        />
       </div>
 
       <div className="space-y-1">

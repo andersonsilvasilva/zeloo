@@ -22,7 +22,13 @@ export default async function HorarioPage({
       />
       <h1 className="mb-1 text-lg font-semibold text-booking-text">Escolha o melhor horário</h1>
       <p className="mb-6 text-sm text-booking-text-secondary">Selecione o dia e o horário que funcionam para você.</p>
-      <SchedulePicker barberId={barberId} serviceIds={serviceIds} clientId={clientId} phone={phone} />
+      <SchedulePicker
+        barberId={barberId}
+        serviceIds={serviceIds}
+        clientId={clientId}
+        phone={phone}
+        timezone={settings.timezone}
+      />
     </div>
   );
 }

@@ -53,7 +53,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {todayAppointments && <TodayScheduleBox appointments={todayAppointments} />}
+      {todayAppointments && <TodayScheduleBox appointments={todayAppointments} timezone={settings.timezone} />}
 
       {birthdays && <BirthdaysBox data={birthdays} />}
 
@@ -157,7 +157,7 @@ async function WelcomeFallback({ userName }: { userName: string }) {
         <p className="text-sm text-text-secondary">Bem-vindo ao painel da {settings.name}.</p>
       </div>
 
-      {todayAppointments && <TodayScheduleBox appointments={todayAppointments} />}
+      {todayAppointments && <TodayScheduleBox appointments={todayAppointments} timezone={settings.timezone} />}
 
       {birthdays && <BirthdaysBox data={birthdays} />}
 
