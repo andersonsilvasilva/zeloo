@@ -25,8 +25,8 @@ export function findCompletedAppointmentsInRange(range: DateRange) {
     where: { status: "COMPLETED", appointmentDate: { gte: range.start, lt: range.end } },
     select: {
       id: true,
-      barberId: true,
-      barber: { select: { professionalName: true } },
+      professionalId: true,
+      professional: { select: { professionalName: true } },
       clientId: true,
       client: { select: { name: true } },
       services: { select: { serviceId: true, service: { select: { name: true } } } },

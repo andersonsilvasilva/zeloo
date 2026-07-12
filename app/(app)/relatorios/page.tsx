@@ -9,12 +9,12 @@ import { getPeriodReportAction } from "@/modules/reports/actions/get-period-repo
 import { StatCard } from "@/modules/reports/components/stat-card";
 import { RevenueLineChart } from "@/modules/reports/components/revenue-line-chart";
 import { ServicePieChart } from "@/modules/reports/components/service-pie-chart";
-import { BarberBarChart } from "@/modules/reports/components/barber-bar-chart";
+import { ProfessionalBarChart } from "@/modules/reports/components/professional-bar-chart";
 import { DateRangeFilters } from "@/components/shared/date-range-filters";
 import { AppointmentStatusSummary } from "@/modules/reports/components/appointment-status-summary";
 import { PaymentMethodList } from "@/modules/reports/components/payment-method-list";
 import { TopClientsList } from "@/modules/reports/components/top-clients-list";
-import { BarberPerformanceTable } from "@/modules/reports/components/barber-performance-table";
+import { ProfessionalPerformanceTable } from "@/modules/reports/components/professional-performance-table";
 import { formatCurrency, formatCompactNumber } from "@/lib/utils/format";
 
 function parseLocalDate(value: string): Date {
@@ -58,7 +58,7 @@ export default async function RelatoriosPage({
         <div>
           <h1 className="text-2xl font-semibold text-text">Relatórios</h1>
           <p className="text-sm text-text-secondary">
-            {report.scopedToOwnBarber
+            {report.scopedToOwnProfessional
               ? "Mostrando apenas os seus próprios indicadores."
               : "Indicadores detalhados por período customizável."}
           </p>
@@ -93,13 +93,13 @@ export default async function RelatoriosPage({
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="mb-4 text-sm font-medium text-text">Faturamento por barbeiro</h2>
-          <BarberBarChart data={report.barberPerformance.map((b) => ({ name: b.name, total: b.revenue }))} />
+          <h2 className="mb-4 text-sm font-medium text-text">Faturamento por profissional</h2>
+          <ProfessionalBarChart data={report.professionalPerformance.map((b) => ({ name: b.name, total: b.revenue }))} />
         </div>
       </section>
 
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        {!report.scopedToOwnBarber && (
+        {!report.scopedToOwnProfessional && (
           <div className="rounded-xl border border-border bg-card p-5">
             <h2 className="mb-4 text-sm font-medium text-text">Faturamento por forma de pagamento</h2>
             <PaymentMethodList data={report.revenueByPaymentMethod} />
@@ -113,9 +113,9 @@ export default async function RelatoriosPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium uppercase tracking-wide text-text-secondary">Desempenho por barbeiro</h2>
+        <h2 className="text-sm font-medium uppercase tracking-wide text-text-secondary">Desempenho por profissional</h2>
         <div className="rounded-xl border border-border bg-card p-5">
-          <BarberPerformanceTable data={report.barberPerformance} />
+          <ProfessionalPerformanceTable data={report.professionalPerformance} />
         </div>
       </section>
     </div>

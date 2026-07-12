@@ -10,7 +10,7 @@ import { listTodayAppointmentsAction } from "@/modules/appointments/actions/list
 import { StatCard } from "@/modules/reports/components/stat-card";
 import { RevenueLineChart } from "@/modules/reports/components/revenue-line-chart";
 import { ServicePieChart } from "@/modules/reports/components/service-pie-chart";
-import { BarberBarChart } from "@/modules/reports/components/barber-bar-chart";
+import { ProfessionalBarChart } from "@/modules/reports/components/professional-bar-chart";
 import { BirthdaysBox } from "@/modules/clients/components/birthdays-box";
 import { TodayScheduleBox } from "@/modules/appointments/components/today-schedule-box";
 import { formatCurrency, formatCompactNumber } from "@/lib/utils/format";
@@ -98,16 +98,16 @@ export default async function DashboardPage() {
             caption={metrics.topService ? `${metrics.topService.count} venda(s)` : undefined}
           />
           <StatCard
-            label="Barbeiro com maior lucro"
-            value={metrics.topBarberByRevenue?.name ?? "—"}
-            caption={metrics.topBarberByRevenue ? formatCurrency(metrics.topBarberByRevenue.total) : undefined}
+            label="Profissional com maior lucro"
+            value={metrics.topProfessionalByRevenue?.name ?? "—"}
+            caption={metrics.topProfessionalByRevenue ? formatCurrency(metrics.topProfessionalByRevenue.total) : undefined}
           />
           <StatCard
-            label="Barbeiro com mais atendimentos"
-            value={metrics.topBarberByAppointments?.name ?? "—"}
+            label="Profissional com mais atendimentos"
+            value={metrics.topProfessionalByAppointments?.name ?? "—"}
             caption={
-              metrics.topBarberByAppointments
-                ? `${metrics.topBarberByAppointments.count} atendimento(s)`
+              metrics.topProfessionalByAppointments
+                ? `${metrics.topProfessionalByAppointments.count} atendimento(s)`
                 : undefined
             }
           />
@@ -128,8 +128,8 @@ export default async function DashboardPage() {
         </div>
 
         <div className="rounded-xl border border-border bg-card p-5">
-          <h2 className="mb-4 text-sm font-medium text-text">Desempenho dos barbeiros (mês atual)</h2>
-          <BarberBarChart data={metrics.barberPerformance} />
+          <h2 className="mb-4 text-sm font-medium text-text">Desempenho dos profissionais (mês atual)</h2>
+          <ProfessionalBarChart data={metrics.professionalPerformance} />
         </div>
       </section>
     </div>

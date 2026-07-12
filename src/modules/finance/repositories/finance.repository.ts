@@ -18,7 +18,7 @@ export type CashbookEntryWithRelations = Prisma.CashbookEntryGetPayload<{ includ
 
 const payableAppointmentInclude = {
   client: { select: { name: true } },
-  barber: { select: { professionalName: true } },
+  professional: { select: { professionalName: true } },
   services: { include: { service: { select: { name: true } } } },
 } satisfies Prisma.AppointmentInclude;
 

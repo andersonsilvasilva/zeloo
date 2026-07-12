@@ -190,7 +190,7 @@ export class ServiceService {
       photoUrl: service.advertisingImage
         ? getStorageProvider().getUrl(service.advertisingImage.storagePath)
         : null,
-      barbersCount: service._count.barbers,
+      professionalsCount: service._count.professionals,
       defaultMessageTemplateId: service.defaultMessageTemplate?.id ?? null,
       defaultMessageTemplateName: service.defaultMessageTemplate?.name ?? null,
     };

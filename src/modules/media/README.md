@@ -1,6 +1,6 @@
 # Módulo: media
 
-Upload centralizado (Media model) usado por clients/barbers/services/settings.
+Upload centralizado (Media model) usado por clients/professionals/services/settings.
 
 ## Estrutura
 - components/   — UI específica do módulo (client components)

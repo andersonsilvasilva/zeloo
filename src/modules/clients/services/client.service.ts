@@ -59,7 +59,7 @@ export class ClientService {
       birthDate: input.birthDate ?? null,
       notes: input.notes || null,
       status: input.status,
-      preferredBarber: input.preferredBarberId ? { connect: { id: input.preferredBarberId } } : undefined,
+      preferredProfessional: input.preferredProfessionalId ? { connect: { id: input.preferredProfessionalId } } : undefined,
     });
     return this.toListItem(client);
   }
@@ -77,8 +77,8 @@ export class ClientService {
       birthDate: input.birthDate ?? null,
       notes: input.notes || null,
       status: input.status,
-      preferredBarber: input.preferredBarberId
-        ? { connect: { id: input.preferredBarberId } }
+      preferredProfessional: input.preferredProfessionalId
+        ? { connect: { id: input.preferredProfessionalId } }
         : { disconnect: true },
     });
     return this.toListItem(client);
@@ -153,8 +153,8 @@ export class ClientService {
 
   async getFormOptions(): Promise<ClientFormOptions> {
     const repo = new ClientRepository();
-    const barbers = await repo.listActiveBarbersForSelect();
-    return { barbers };
+    const professionals = await repo.listActiveProfessionalsForSelect();
+    return { professionals };
   }
 
   /**
@@ -246,7 +246,7 @@ export class ClientService {
       whatsapp: client.whatsapp,
       email: client.email,
       status: client.status,
-      preferredBarber: client.preferredBarber,
+      preferredProfessional: client.preferredProfessional,
       totalSpent: client.totalSpent.toNumber(),
       lastAppointmentAt: client.lastAppointmentAt,
       photoUrl: client.profileImage ? getStorageProvider().getUrl(client.profileImage.storagePath) : null,

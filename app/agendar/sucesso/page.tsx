@@ -42,7 +42,7 @@ export default async function SucessoPage({
           <div className="mt-6 w-full space-y-3 rounded-xl bg-booking-card p-4 text-left text-booking-card-foreground">
             <div>
               <p className="text-xs uppercase tracking-wide opacity-70">Profissional</p>
-              <p className="font-semibold">{result.appointment.barber.professionalName}</p>
+              <p className="font-semibold">{result.appointment.professional.professionalName}</p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide opacity-70">Serviço(s)</p>

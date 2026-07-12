@@ -18,7 +18,7 @@ import type { AppointmentFormOptions, TimeSlot } from "@/modules/appointments/ty
 
 export interface AppointmentFormDefaultValues {
   clientId: string;
-  barberId: string;
+  professionalId: string;
   serviceIds: string[];
   appointmentDate: Date;
   startTime: Date;
@@ -50,7 +50,7 @@ function formatLocalDateInput(date: Date): string {
 export function AppointmentForm({ options, mode, appointmentId, defaultValues, onSuccess }: AppointmentFormProps) {
   const [clientId, setClientId] = useState(defaultValues?.clientId ?? "");
   const [serviceIds, setServiceIds] = useState<string[]>(defaultValues?.serviceIds ?? []);
-  const [barberId, setBarberId] = useState(defaultValues?.barberId ?? "");
+  const [professionalId, setProfessionalId] = useState(defaultValues?.professionalId ?? "");
   const [dateStr, setDateStr] = useState(
     defaultValues ? formatDateOnly(defaultValues.appointmentDate) : "",
   );
@@ -66,12 +66,12 @@ export function AppointmentForm({ options, mode, appointmentId, defaultValues, o
   const [submitting, setSubmitting] = useState(false);
   const requestIdRef = useRef(0);
 
-  const availableBarbers = useMemo(
+  const availableProfessionals = useMemo(
     () =>
       serviceIds.length === 0
         ? []
-        : options.barbers.filter((b) => serviceIds.every((id) => b.serviceIds.includes(id))),
-    [options.barbers, serviceIds],
+        : options.professionals.filter((b) => serviceIds.every((id) => b.serviceIds.includes(id))),
+    [options.professionals, serviceIds],
   );
 
   const selectedServices = useMemo(
@@ -81,15 +81,15 @@ export function AppointmentForm({ options, mode, appointmentId, defaultValues, o
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0);
 
-  // Se o barbeiro selecionado não atende mais todos os serviços escolhidos, limpa a seleção.
+  // Se o profissional selecionado não atende mais todos os serviços escolhidos, limpa a seleção.
   useEffect(() => {
-    if (barberId && !availableBarbers.some((b) => b.id === barberId)) {
-      setBarberId("");
+    if (professionalId && !availableProfessionals.some((b) => b.id === professionalId)) {
+      setProfessionalId("");
     }
-  }, [availableBarbers, barberId]);
+  }, [availableProfessionals, professionalId]);
 
   useEffect(() => {
-    if (!barberId || !dateStr || serviceIds.length === 0) {
+    if (!professionalId || !dateStr || serviceIds.length === 0) {
       setSlots([]);
       return;
     }
@@ -98,7 +98,7 @@ export function AppointmentForm({ options, mode, appointmentId, defaultValues, o
     setSlotsLoading(true);
 
     getAvailableSlotsAction({
-      barberId,
+      professionalId,
       serviceIds,
       date: parseLocalDateInput(dateStr),
       excludeAppointmentId: mode === "edit" ? appointmentId : undefined,
@@ -115,7 +115,7 @@ export function AppointmentForm({ options, mode, appointmentId, defaultValues, o
       .finally(() => {
         if (requestIdRef.current === requestId) setSlotsLoading(false);
       });
-  }, [barberId, dateStr, serviceIds, mode, appointmentId]);
+  }, [professionalId, dateStr, serviceIds, mode, appointmentId]);
 
   function toggleService(serviceId: string) {
     setServiceIds((current) =>
@@ -129,13 +129,13 @@ export function AppointmentForm({ options, mode, appointmentId, defaultValues, o
 
     if (!clientId) return setFormError("Selecione o cliente.");
     if (serviceIds.length === 0) return setFormError("Selecione ao menos um serviço.");
-    if (!barberId) return setFormError("Selecione o barbeiro.");
+    if (!professionalId) return setFormError("Selecione o profissional.");
     if (!dateStr) return setFormError("Selecione a data.");
     if (!selectedSlot) return setFormError("Selecione um horário disponível.");
 
     const payload = {
       clientId,
-      barberId,
+      professionalId,
       appointmentDate: parseDateOnly(dateStr),
       startTime: selectedSlot.start,
       serviceIds,
@@ -210,17 +210,17 @@ export function AppointmentForm({ options, mode, appointmentId, defaultValues, o
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor="barberId">Barbeiro</Label>
+        <Label htmlFor="professionalId">Profissional</Label>
         <Select
-          id="barberId"
-          value={barberId}
-          onChange={(e) => setBarberId(e.target.value)}
+          id="professionalId"
+          value={professionalId}
+          onChange={(e) => setProfessionalId(e.target.value)}
           disabled={serviceIds.length === 0}
         >
           <option value="">
-            {serviceIds.length === 0 ? "Selecione ao menos um serviço primeiro" : "Selecione o barbeiro"}
+            {serviceIds.length === 0 ? "Selecione ao menos um serviço primeiro" : "Selecione o profissional"}
           </option>
-          {availableBarbers.map((b) => (
+          {availableProfessionals.map((b) => (
             <option key={b.id} value={b.id}>
               {b.professionalName}
             </option>

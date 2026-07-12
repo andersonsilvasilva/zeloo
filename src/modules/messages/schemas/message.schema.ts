@@ -38,7 +38,7 @@ export type ListTemplatesInput = z.infer<typeof listTemplatesSchema>;
 export const sendMessageSchema = z.object({
   clientId: z.string().cuid(),
   templateId: z.string().cuid(),
-  /** Necessário quando o modelo usa {{barber_agendado}} ou {{resumo_agendamento}}. */
+  /** Necessário quando o modelo usa {{professional_agendado}} ou {{resumo_agendamento}}. */
   appointmentId: z.string().cuid().optional(),
 });
 

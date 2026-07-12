@@ -7,7 +7,7 @@ type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 const serviceInclude = {
   advertisingImage: { select: { storagePath: true } },
   defaultMessageTemplate: { select: { id: true, name: true } },
-  _count: { select: { barbers: true } },
+  _count: { select: { professionals: true } },
 } satisfies Prisma.ServiceInclude;
 
 export type ServiceWithRelations = Prisma.ServiceGetPayload<{ include: typeof serviceInclude }>;

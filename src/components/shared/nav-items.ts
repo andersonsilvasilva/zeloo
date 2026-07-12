@@ -12,7 +12,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/", icon: "LayoutDashboard" },
   { label: "Agenda", href: "/agenda", icon: "CalendarDays", permission: PERMISSIONS.appointments.view },
   { label: "Clientes", href: "/clientes", icon: "Users", permission: PERMISSIONS.clients.view },
-  { label: "Barbeiros", href: "/barbeiros", icon: "Scissors", permission: PERMISSIONS.barbers.view },
+  { label: "Profissionais", href: "/profissionais", icon: "Scissors", permission: PERMISSIONS.professionals.view },
   { label: "Serviços", href: "/servicos", icon: "Sparkles", permission: PERMISSIONS.services.view },
   { label: "Financeiro", href: "/financeiro", icon: "Wallet", permission: PERMISSIONS.finance.view },
   { label: "Relatórios", href: "/relatorios", icon: "BarChart3", permission: PERMISSIONS.reports.view },

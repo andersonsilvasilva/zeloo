@@ -67,7 +67,7 @@ export function ServiceList({ services, options, canUpdate, canDelete }: Service
                     {service.category ? ` · ${service.category}` : ""}
                   </p>
                   <p className="text-xs text-text-secondary">
-                    {service.barbersCount} barbeiro(s) oferecem este serviço
+                    {service.professionalsCount} profissional(s) oferecem este serviço
                     {service.defaultMessageTemplateName
                       ? ` · Mensagem padrão: ${service.defaultMessageTemplateName}`
                       : ""}

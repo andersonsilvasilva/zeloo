@@ -25,14 +25,14 @@ import type { TimeSlot } from "@/modules/appointments/types/appointment.types";
 const WEEKDAY_LABELS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export interface SchedulePickerProps {
-  barberId: string;
+  professionalId: string;
   serviceIds: string;
   clientId: string;
   phone: string;
   timezone: string;
 }
 
-export function SchedulePicker({ barberId, serviceIds, clientId, phone, timezone }: SchedulePickerProps) {
+export function SchedulePicker({ professionalId, serviceIds, clientId, phone, timezone }: SchedulePickerProps) {
   const router = useRouter();
   const today = startOfDay(new Date());
 
@@ -49,7 +49,7 @@ export function SchedulePicker({ barberId, serviceIds, clientId, phone, timezone
     let cancelled = false;
     setLoading(true);
     setSelectedSlot(null);
-    getPublicAvailableSlotsAction({ barberId, serviceIds: serviceIdList, date: selectedDay }).then((result) => {
+    getPublicAvailableSlotsAction({ professionalId, serviceIds: serviceIdList, date: selectedDay }).then((result) => {
       // Evita que a resposta de um dia clicado antes "vença" a corrida e
       // sobrescreva os horários do dia clicado depois (respostas fora de ordem).
       if (cancelled) return;
@@ -68,7 +68,7 @@ export function SchedulePicker({ barberId, serviceIds, clientId, phone, timezone
   function handleContinue() {
     if (!selectedDay || !selectedSlot) return;
     const params = new URLSearchParams({
-      barberId,
+      professionalId,
       serviceIds,
       clientId,
       phone,

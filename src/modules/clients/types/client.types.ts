@@ -2,7 +2,7 @@ import type { clientStatusValues } from "@/modules/clients/schemas/client.schema
 
 export type ClientStatus = (typeof clientStatusValues)[number];
 
-export interface ClientBarberOption {
+export interface ClientProfessionalOption {
   id: string;
   professionalName: string;
 }
@@ -14,7 +14,7 @@ export interface ClientListItem {
   whatsapp: string | null;
   email: string | null;
   status: ClientStatus;
-  preferredBarber: ClientBarberOption | null;
+  preferredProfessional: ClientProfessionalOption | null;
   totalSpent: number;
   lastAppointmentAt: Date | null;
   photoUrl: string | null;
@@ -26,7 +26,7 @@ export interface ClientDetail extends ClientListItem {
 }
 
 export interface ClientFormOptions {
-  barbers: ClientBarberOption[];
+  professionals: ClientProfessionalOption[];
 }
 
 export interface BirthdayClient {

@@ -1,7 +1,7 @@
 import { signIn } from "@/lib/auth/auth";
 import { hashPassword } from "@/lib/auth/password";
 import { getStorageProvider } from "@/lib/storage";
-import { BarberRepository } from "@/modules/barbers/repositories/barber.repository";
+import { ProfessionalRepository } from "@/modules/professionals/repositories/professional.repository";
 import { ServiceRepository } from "@/modules/services/repositories/service.repository";
 import { AppointmentService, AppointmentConflictError } from "@/modules/appointments/services/appointment.service";
 import { autoSendAppointmentConfirmationAction } from "@/modules/messages/actions/auto-send-appointment-confirmation.action";
@@ -9,8 +9,8 @@ import { BookingRepository } from "@/modules/booking/repositories/booking.reposi
 import type { IdentifyClientInput, CreatePublicAppointmentInput } from "@/modules/booking/schemas/booking.schema";
 import type {
   IdentifyClientResult,
-  PublicBarberOption,
-  PublicBarberProfile,
+  PublicProfessionalOption,
+  PublicProfessionalProfile,
   PublicServiceOption,
 } from "@/modules/booking/types/booking.types";
 
@@ -21,10 +21,10 @@ export class EmailAlreadyExistsError extends Error {
   }
 }
 
-export class BarberNotFoundError extends Error {
+export class ProfessionalNotFoundError extends Error {
   constructor() {
     super("Profissional não encontrado.");
-    this.name = "BarberNotFoundError";
+    this.name = "ProfessionalNotFoundError";
   }
 }
 
@@ -43,11 +43,11 @@ export class PhoneMismatchError extends Error {
 }
 
 export class BookingService {
-  async listBarbers(): Promise<PublicBarberOption[]> {
-    const repo = new BarberRepository();
-    const barbers = await repo.listActiveForPublicBooking();
+  async listProfessionals(): Promise<PublicProfessionalOption[]> {
+    const repo = new ProfessionalRepository();
+    const professionals = await repo.listActiveForPublicBooking();
     const storage = getStorageProvider();
-    return barbers.map((b) => ({
+    return professionals.map((b) => ({
       id: b.id,
       fullName: b.fullName,
       professionalName: b.professionalName,
@@ -57,19 +57,19 @@ export class BookingService {
   }
 
   /** Perfil do profissional pra página `/agendar/profissional` — foto, bio e só os serviços que ele oferece. */
-  async getBarberProfile(barberId: string): Promise<PublicBarberProfile> {
-    const repo = new BarberRepository();
-    const barber = await repo.findActiveForPublicBookingById(barberId);
-    if (!barber) throw new BarberNotFoundError();
+  async getProfessionalProfile(professionalId: string): Promise<PublicProfessionalProfile> {
+    const repo = new ProfessionalRepository();
+    const professional = await repo.findActiveForPublicBookingById(professionalId);
+    if (!professional) throw new ProfessionalNotFoundError();
 
     const storage = getStorageProvider();
     return {
-      id: barber.id,
-      fullName: barber.fullName,
-      professionalName: barber.professionalName,
-      bio: barber.bio,
-      photoUrl: barber.profileImage ? storage.getUrl(barber.profileImage.storagePath) : null,
-      services: barber.services.map(({ service: s }) => ({
+      id: professional.id,
+      fullName: professional.fullName,
+      professionalName: professional.professionalName,
+      bio: professional.bio,
+      photoUrl: professional.profileImage ? storage.getUrl(professional.profileImage.storagePath) : null,
+      services: professional.services.map(({ service: s }) => ({
         id: s.id,
         name: s.name,
         shortDescription: s.shortDescription,
@@ -171,7 +171,7 @@ export class BookingService {
     const appointment = await appointmentService.create(
       {
         clientId,
-        barberId: input.barberId,
+        professionalId: input.professionalId,
         appointmentDate: input.appointmentDate,
         startTime: input.startTime,
         serviceIds: input.serviceIds,

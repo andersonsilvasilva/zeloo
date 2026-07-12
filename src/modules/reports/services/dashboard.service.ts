@@ -69,7 +69,7 @@ export class DashboardService {
 
     const clientTotals = new Map<string, NamedTotal>();
     const serviceCounts = new Map<string, NamedCount>();
-    const barberStats = new Map<string, { name: string; revenue: number; count: number }>();
+    const professionalStats = new Map<string, { name: string; revenue: number; count: number }>();
 
     for (const appt of monthAppointments) {
       const paid = appt.payments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
@@ -86,14 +86,14 @@ export class DashboardService {
         serviceCounts.set(s.serviceId, service);
       }
 
-      const barber = barberStats.get(appt.barberId) ?? {
-        name: appt.barber.professionalName,
+      const professional = professionalStats.get(appt.professionalId) ?? {
+        name: appt.professional.professionalName,
         revenue: 0,
         count: 0,
       };
-      barber.revenue += paid;
-      barber.count += 1;
-      barberStats.set(appt.barberId, barber);
+      professional.revenue += paid;
+      professional.count += 1;
+      professionalStats.set(appt.professionalId, professional);
     }
 
     const topClient = [...clientTotals.values()].sort((a, b) => b.total - a.total)[0] ?? null;
@@ -101,10 +101,10 @@ export class DashboardService {
     const topService = serviceEntries[0] ?? null;
     const serviceDistribution = this.topNWithOthers(serviceEntries, TOP_SERVICES_LIMIT);
 
-    const barberList = [...barberStats.values()];
-    const topBarberByRevenue = [...barberList].sort((a, b) => b.revenue - a.revenue)[0];
-    const topBarberByAppointments = [...barberList].sort((a, b) => b.count - a.count)[0];
-    const barberPerformance: NamedTotal[] = [...barberList]
+    const professionalList = [...professionalStats.values()];
+    const topProfessionalByRevenue = [...professionalList].sort((a, b) => b.revenue - a.revenue)[0];
+    const topProfessionalByAppointments = [...professionalList].sort((a, b) => b.count - a.count)[0];
+    const professionalPerformance: NamedTotal[] = [...professionalList]
       .sort((a, b) => b.revenue - a.revenue)
       .map((b) => ({ name: b.name, total: b.revenue }));
 
@@ -114,15 +114,15 @@ export class DashboardService {
       averageTicket,
       topClient,
       topService,
-      topBarberByRevenue: topBarberByRevenue
-        ? { name: topBarberByRevenue.name, total: topBarberByRevenue.revenue }
+      topProfessionalByRevenue: topProfessionalByRevenue
+        ? { name: topProfessionalByRevenue.name, total: topProfessionalByRevenue.revenue }
         : null,
-      topBarberByAppointments: topBarberByAppointments
-        ? { name: topBarberByAppointments.name, count: topBarberByAppointments.count }
+      topProfessionalByAppointments: topProfessionalByAppointments
+        ? { name: topProfessionalByAppointments.name, count: topProfessionalByAppointments.count }
         : null,
       revenueTrend: this.dailyRevenueSeries(trendPayments, REVENUE_TREND_DAYS, now),
       serviceDistribution,
-      barberPerformance,
+      professionalPerformance,
     };
   }
 

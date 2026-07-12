@@ -14,11 +14,11 @@ export const PERMISSIONS = {
     update: "clients.update",
     delete: "clients.delete",
   },
-  barbers: {
-    view: "barbers.view",
-    create: "barbers.create",
-    update: "barbers.update",
-    delete: "barbers.delete",
+  professionals: {
+    view: "professionals.view",
+    create: "professionals.create",
+    update: "professionals.update",
+    delete: "professionals.delete",
   },
   services: {
     view: "services.view",
@@ -61,7 +61,7 @@ export type PermissionSlug = {
 /** Papéis iniciais do sistema. */
 export const ROLES = {
   ADMIN: "ADMIN",
-  BARBER: "BARBER",
+  PROFESSIONAL: "PROFESSIONAL",
   ATTENDANT: "ATTENDANT",
   CASHIER: "CASHIER",
   CLIENT: "CLIENT",
@@ -76,7 +76,7 @@ export type RoleSlug = (typeof ROLES)[keyof typeof ROLES];
  */
 export const DEFAULT_ROLE_PERMISSIONS: Record<RoleSlug, PermissionSlug[]> = {
   ADMIN: Object.values(PERMISSIONS).flatMap((group) => Object.values(group)) as PermissionSlug[],
-  BARBER: [
+  PROFESSIONAL: [
     PERMISSIONS.appointments.view,
     PERMISSIONS.clients.view,
     PERMISSIONS.services.view,
@@ -90,7 +90,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleSlug, PermissionSlug[]> = {
     PERMISSIONS.appointments.create,
     PERMISSIONS.appointments.update,
     PERMISSIONS.appointments.cancel,
-    PERMISSIONS.barbers.view,
+    PERMISSIONS.professionals.view,
     PERMISSIONS.services.view,
   ],
   CASHIER: [
@@ -106,12 +106,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleSlug, PermissionSlug[]> = {
     PERMISSIONS.appointments.update,
     PERMISSIONS.appointments.cancel,
     PERMISSIONS.services.view,
-    PERMISSIONS.barbers.view,
+    PERMISSIONS.professionals.view,
   ],
 };
 
 /**
- * IMPORTANTE: BARBER nunca deve receber finance.* — o barbeiro não pode
+ * IMPORTANTE: PROFESSIONAL nunca deve receber finance.* — o profissional não pode
  * visualizar informações financeiras globais da barbearia (ver spec item 3).
  * Essa restrição é reforçada também na camada de service (ver
  * modules/reports/services), não apenas aqui.

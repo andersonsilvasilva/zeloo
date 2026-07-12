@@ -9,10 +9,10 @@ export interface ServiceOption {
   durationMinutes: number;
 }
 
-export interface BarberOption {
+export interface ProfessionalOption {
   id: string;
   professionalName: string;
-  /** ids dos serviços que este barbeiro atende — usado para filtrar o select no formulário. */
+  /** ids dos serviços que este profissional atende — usado para filtrar o select no formulário. */
   serviceIds: string[];
 }
 
@@ -24,7 +24,7 @@ export interface ClientOption {
 
 export interface AppointmentFormOptions {
   services: ServiceOption[];
-  barbers: BarberOption[];
+  professionals: ProfessionalOption[];
   clients: ClientOption[];
   timezone: string;
 }
@@ -43,7 +43,7 @@ export interface AppointmentListItem {
   status: AppointmentStatus;
   notes: string | null;
   client: { id: string; name: string };
-  barber: { id: string; professionalName: string };
+  professional: { id: string; professionalName: string };
   services: { id: string; name: string }[];
   totalPrice: number;
   totalDurationMinutes: number;

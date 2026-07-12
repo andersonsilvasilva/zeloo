@@ -2,13 +2,13 @@ import { addDays, format, startOfDay } from "date-fns";
 import type { DateRange } from "@/modules/reports/repositories/dashboard.repository";
 import {
   countAppointmentsByStatusInRange,
-  findBarberIdByUserId,
+  findProfessionalIdByUserId,
   findCompletedAppointmentsInRangeDetailed,
   findPaidPaymentsInRangeWithMethod,
 } from "@/modules/reports/repositories/period-report.repository";
 import type { PeriodReportFiltersInput } from "@/modules/reports/schemas/period-report.schema";
 import type {
-  BarberPerformanceRow,
+  ProfessionalPerformanceRow,
   PaymentMethodTotal,
   PeriodReport,
 } from "@/modules/reports/types/period-report.types";
@@ -26,14 +26,14 @@ const TOP_CLIENTS_LIMIT = 10;
 
 export interface GetPeriodReportOptions {
   userId: string;
-  /** Usuários sem finance.view (ex.: BARBER) só veem os próprios indicadores. */
+  /** Usuários sem finance.view (ex.: PROFESSIONAL) só veem os próprios indicadores. */
   canViewFinance: boolean;
 }
 
 /**
  * Relatórios com período customizável (diferente do dashboard, que usa
- * buckets fixos de dia/semana/mês/ano). Reforça a regra de que BARBER nunca
- * vê dados financeiros/de outros barbeiros — ver `src/lib/auth/permissions.ts`.
+ * buckets fixos de dia/semana/mês/ano). Reforça a regra de que PROFESSIONAL nunca
+ * vê dados financeiros/de outros profissionais — ver `src/lib/auth/permissions.ts`.
  */
 export class PeriodReportService {
   async getReport(filters: PeriodReportFiltersInput, options: GetPeriodReportOptions): Promise<PeriodReport> {
@@ -42,28 +42,28 @@ export class PeriodReportService {
       end: addDays(startOfDay(filters.dateTo), 1),
     };
 
-    let barberId: string | undefined;
-    const scopedToOwnBarber = !options.canViewFinance;
+    let professionalId: string | undefined;
+    const scopedToOwnProfessional = !options.canViewFinance;
 
-    if (scopedToOwnBarber) {
-      const barber = await findBarberIdByUserId(options.userId);
-      if (!barber) {
-        // Papel restrito sem barbeiro vinculado: não há indicador próprio para mostrar.
+    if (scopedToOwnProfessional) {
+      const professional = await findProfessionalIdByUserId(options.userId);
+      if (!professional) {
+        // Papel restrito sem profissional vinculado: não há indicador próprio para mostrar.
         return this.emptyReport(filters.dateFrom, filters.dateTo, true);
       }
-      barberId = barber.id;
+      professionalId = professional.id;
     }
 
     const [statusGroups, payments, appointments] = await Promise.all([
-      countAppointmentsByStatusInRange(range, barberId),
-      findPaidPaymentsInRangeWithMethod(range, barberId),
-      findCompletedAppointmentsInRangeDetailed(range, barberId),
+      countAppointmentsByStatusInRange(range, professionalId),
+      findPaidPaymentsInRangeWithMethod(range, professionalId),
+      findCompletedAppointmentsInRangeDetailed(range, professionalId),
     ]);
 
     const clientTotals = new Map<string, NamedTotal>();
     const serviceCounts = new Map<string, NamedCount>();
     const serviceRevenue = new Map<string, NamedTotal>();
-    const barberStats = new Map<
+    const professionalStats = new Map<
       string,
       { name: string; revenue: number; count: number; commissionPercentage: number }
     >();
@@ -87,20 +87,20 @@ export class PeriodReportService {
         serviceRevenue.set(s.serviceId, revenue);
       }
 
-      const barber = barberStats.get(appt.barberId) ?? {
-        name: appt.barber.professionalName,
+      const professional = professionalStats.get(appt.professionalId) ?? {
+        name: appt.professional.professionalName,
         revenue: 0,
         count: 0,
-        commissionPercentage: appt.barber.commissionPercentage.toNumber(),
+        commissionPercentage: appt.professional.commissionPercentage.toNumber(),
       };
-      barber.revenue += paid;
-      barber.count += 1;
-      barberStats.set(appt.barberId, barber);
+      professional.revenue += paid;
+      professional.count += 1;
+      professionalStats.set(appt.professionalId, professional);
     }
 
     const totalRevenue = payments.reduce((sum, p) => sum + p.amount.toNumber(), 0);
 
-    const barberPerformance: BarberPerformanceRow[] = [...barberStats.entries()]
+    const professionalPerformance: ProfessionalPerformanceRow[] = [...professionalStats.entries()]
       .map(([id, s]) => ({
         id,
         name: s.name,
@@ -122,9 +122,9 @@ export class PeriodReportService {
       appointmentsByStatus: statusGroups.map((g) => ({ status: g.status, count: g._count._all })),
       serviceDistribution: [...serviceCounts.values()].sort((a, b) => b.count - a.count),
       servicesByRevenue: [...serviceRevenue.values()].sort((a, b) => b.total - a.total),
-      barberPerformance,
+      professionalPerformance,
       topClients: [...clientTotals.values()].sort((a, b) => b.total - a.total).slice(0, TOP_CLIENTS_LIMIT),
-      scopedToOwnBarber,
+      scopedToOwnProfessional,
     };
   }
 
@@ -161,7 +161,7 @@ export class PeriodReportService {
     return series;
   }
 
-  private emptyReport(dateFrom: Date, dateTo: Date, scopedToOwnBarber: boolean): PeriodReport {
+  private emptyReport(dateFrom: Date, dateTo: Date, scopedToOwnProfessional: boolean): PeriodReport {
     return {
       dateFrom,
       dateTo,
@@ -173,9 +173,9 @@ export class PeriodReportService {
       appointmentsByStatus: [],
       serviceDistribution: [],
       servicesByRevenue: [],
-      barberPerformance: [],
+      professionalPerformance: [],
       topClients: [],
-      scopedToOwnBarber,
+      scopedToOwnProfessional,
     };
   }
 }

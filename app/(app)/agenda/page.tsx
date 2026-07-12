@@ -14,7 +14,7 @@ import type { AppointmentStatus } from "@/modules/appointments/types/appointment
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: { date?: string; barberId?: string; status?: string };
+  searchParams: { date?: string; professionalId?: string; status?: string };
 }) {
   const canView = await hasPermission(PERMISSIONS.appointments.view);
   if (!canView) return <ComingSoon title="Agenda" />;
@@ -30,7 +30,7 @@ export default async function AgendaPage({
 
   const settings = await getGeneralSettingsAction();
   const date = searchParams.date || formatDateOnly(todayInTimezone(settings.timezone));
-  const barberId = searchParams.barberId || "";
+  const professionalId = searchParams.professionalId || "";
   const status = searchParams.status || "";
   const selectedDate = parseDateOnly(date);
 
@@ -39,7 +39,7 @@ export default async function AgendaPage({
     listAppointmentsAction({
       dateFrom: selectedDate,
       dateTo: selectedDate,
-      barberId: barberId || undefined,
+      professionalId: professionalId || undefined,
       status: (status || undefined) as AppointmentStatus | undefined,
     }),
   ]);
@@ -49,12 +49,12 @@ export default async function AgendaPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-text">Agenda</h1>
-          <p className="text-sm text-text-secondary">Serviço → barbeiro → data → horário.</p>
+          <p className="text-sm text-text-secondary">Serviço → profissional → data → horário.</p>
         </div>
         {canCreate && <NewAppointmentButton options={options} />}
       </div>
 
-      <AppointmentFilters date={date} barberId={barberId} status={status} barbers={options.barbers} />
+      <AppointmentFilters date={date} professionalId={professionalId} status={status} professionals={options.professionals} />
 
       <AppointmentList
         appointments={appointments}

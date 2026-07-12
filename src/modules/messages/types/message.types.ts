@@ -41,7 +41,7 @@ export interface MessageFormOptions {
 export interface MessageAppointmentOption {
   id: string;
   startTime: Date;
-  barberName: string;
+  professionalName: string;
   servicesLabel: string;
   totalPrice: number;
 }

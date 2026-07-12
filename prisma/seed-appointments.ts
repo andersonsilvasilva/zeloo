@@ -1,6 +1,6 @@
 /**
  * Gera histórico fictício de agendamentos, pagamentos e lançamentos de caixa
- * em cima dos barbeiros/clientes/serviços já criados por `seed-demo.ts`.
+ * em cima dos profissionais/clientes/serviços já criados por `seed-demo.ts`.
  * Roda com `npx tsx prisma/seed-appointments.ts`. Idempotente por checagem
  * simples: aborta se já existir algum agendamento.
  */
@@ -47,12 +47,12 @@ async function main() {
   }
 
   const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@barbershop.local" } });
-  const barbers = await prisma.barber.findMany({ where: { status: "ACTIVE" } });
+  const professionals = await prisma.professional.findMany({ where: { status: "ACTIVE" } });
   const clients = await prisma.client.findMany();
   const services = await prisma.service.findMany({ where: { status: "ACTIVE" } });
 
-  if (barbers.length === 0 || clients.length === 0 || services.length === 0) {
-    console.log("Rode antes o `npx tsx prisma/seed-demo.ts` — faltam barbeiros, clientes ou serviços.");
+  if (professionals.length === 0 || clients.length === 0 || services.length === 0) {
+    console.log("Rode antes o `npx tsx prisma/seed-demo.ts` — faltam profissionais, clientes ou serviços.");
     return;
   }
 
@@ -87,7 +87,7 @@ async function main() {
       if (startHour >= 19) continue;
 
       const client = pick(clients);
-      const barber = pick(barbers);
+      const professional = pick(professionals);
       const serviceCount = Math.random() < 0.35 && services.length > 1 ? 2 : 1;
       const chosenServices = Array.from(
         new Map(
@@ -103,7 +103,7 @@ async function main() {
       const appointment = await prisma.appointment.create({
         data: {
           clientId: client.id,
-          barberId: barber.id,
+          professionalId: professional.id,
           appointmentDate: parseDateOnly(formatDateOnly(new Date(Date.UTC(day.getFullYear(), day.getMonth(), day.getDate())))),
           startTime,
           endTime,

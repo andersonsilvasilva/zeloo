@@ -10,7 +10,7 @@ export interface AppointmentStatusCount {
   count: number;
 }
 
-export interface BarberPerformanceRow {
+export interface ProfessionalPerformanceRow {
   id: string;
   name: string;
   count: number;
@@ -30,8 +30,8 @@ export interface PeriodReport {
   appointmentsByStatus: AppointmentStatusCount[];
   serviceDistribution: NamedCount[];
   servicesByRevenue: NamedTotal[];
-  barberPerformance: BarberPerformanceRow[];
+  professionalPerformance: ProfessionalPerformanceRow[];
   topClients: NamedTotal[];
-  /** true quando o relatório foi restrito ao próprio barbeiro (usuário sem finance.view). */
-  scopedToOwnBarber: boolean;
+  /** true quando o relatório foi restrito ao próprio profissional (usuário sem finance.view). */
+  scopedToOwnProfessional: boolean;
 }

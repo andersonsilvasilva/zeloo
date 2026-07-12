@@ -24,11 +24,11 @@ const identificationFieldsSchema = z.object({
 type IdentificationFields = z.infer<typeof identificationFieldsSchema>;
 
 export interface IdentificationFormProps {
-  barberId: string;
+  professionalId: string;
   serviceIds: string;
 }
 
-export function IdentificationForm({ barberId, serviceIds }: IdentificationFormProps) {
+export function IdentificationForm({ professionalId, serviceIds }: IdentificationFormProps) {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
   const [wantsAccount, setWantsAccount] = useState(false);
@@ -91,7 +91,7 @@ export function IdentificationForm({ barberId, serviceIds }: IdentificationFormP
     }
 
     const params = new URLSearchParams({
-      barberId,
+      professionalId,
       serviceIds,
       clientId: result.clientId,
       phone: fields.phone,

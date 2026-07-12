@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { serviceIdSchema, type ServiceIdInput } from "@/modules/services/schemas/service.schema";
@@ -18,6 +19,7 @@ export async function deleteServiceAction(rawInput: ServiceIdInput) {
   try {
     const service = new ServiceService();
     await service.delete(input.id);
+    revalidatePath("/", "layout");
     return { success: true as const };
   } catch (error) {
     if (error instanceof ServiceInUseError || error instanceof ServiceNotFoundError) {

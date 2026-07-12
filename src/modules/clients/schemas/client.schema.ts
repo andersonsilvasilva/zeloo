@@ -17,7 +17,7 @@ export const createClientSchema = z.object({
     .refine((v) => v === "" || z.string().email().safeParse(v).success, { message: "E-mail inválido." }),
   birthDate: z.coerce.date().optional().nullable(),
   notes: z.string().trim().max(1000).optional().default(""),
-  preferredBarberId: z.string().cuid().optional().nullable(),
+  preferredProfessionalId: z.string().cuid().optional().nullable(),
   status: clientStatusSchema.default("ACTIVE"),
 });
 
@@ -32,7 +32,7 @@ export type ClientIdInput = z.infer<typeof clientIdSchema>;
 export const listClientsSchema = z.object({
   search: z.string().trim().max(200).optional(),
   status: clientStatusSchema.optional(),
-  preferredBarberId: z.string().cuid().optional(),
+  preferredProfessionalId: z.string().cuid().optional(),
 });
 
 export type ListClientsInput = z.infer<typeof listClientsSchema>;

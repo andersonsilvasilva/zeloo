@@ -13,7 +13,7 @@ const logInclude = {
 export type MessageLogWithRelations = Prisma.MessageLogGetPayload<{ include: typeof logInclude }>;
 
 const appointmentInclude = {
-  barber: { select: { professionalName: true } },
+  professional: { select: { professionalName: true } },
   services: { include: { service: { select: { name: true } } } },
 } satisfies Prisma.AppointmentInclude;
 

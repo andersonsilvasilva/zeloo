@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 /** Senha padrão para todos os usuários fictícios criados por este script. */
 const TEST_PASSWORD = "Teste@123";
 
-interface BarberSeed {
+interface ProfessionalSeed {
   fullName: string;
   professionalName: string;
   email: string;
@@ -14,7 +14,7 @@ interface BarberSeed {
   commissionPercentage: number;
 }
 
-const BARBERS: BarberSeed[] = [
+const PROFESSIONALS: ProfessionalSeed[] = [
   { fullName: "João Pereira", professionalName: "João", email: "joao.pereira@barbershop.local", phone: "(11) 91111-0001", commissionPercentage: 45 },
   { fullName: "Marcos Andrade", professionalName: "Marcos", email: "marcos.andrade@barbershop.local", phone: "(11) 91111-0002", commissionPercentage: 40 },
   { fullName: "Pedro Henrique", professionalName: "Pedro", email: "pedro.henrique@barbershop.local", phone: "(11) 91111-0003", commissionPercentage: 50 },
@@ -98,10 +98,10 @@ async function createStaffUser(name: string, email: string, roleSlug: string, pa
 async function main() {
   const passwordHash = await bcrypt.hash(TEST_PASSWORD, 10);
 
-  console.log("Seeding barbeiros...");
-  for (const b of BARBERS) {
-    const user = await createStaffUser(b.fullName, b.email, "BARBER", passwordHash);
-    await prisma.barber.upsert({
+  console.log("Seeding profissionais...");
+  for (const b of PROFESSIONALS) {
+    const user = await createStaffUser(b.fullName, b.email, "PROFESSIONAL", passwordHash);
+    await prisma.professional.upsert({
       where: { userId: user.id },
       update: {},
       create: {

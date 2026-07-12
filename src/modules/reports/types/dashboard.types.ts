@@ -33,9 +33,9 @@ export interface DashboardMetrics {
   averageTicket: number;
   topClient: NamedTotal | null;
   topService: NamedCount | null;
-  topBarberByRevenue: NamedTotal | null;
-  topBarberByAppointments: NamedCount | null;
+  topProfessionalByRevenue: NamedTotal | null;
+  topProfessionalByAppointments: NamedCount | null;
   revenueTrend: RevenueTrendPoint[];
   serviceDistribution: NamedCount[];
-  barberPerformance: NamedTotal[];
+  professionalPerformance: NamedTotal[];
 }

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { updateServiceSchema, type UpdateServiceInput } from "@/modules/services/schemas/service.schema";
@@ -14,6 +15,7 @@ export async function updateServiceAction(rawInput: UpdateServiceInput) {
   try {
     const service = new ServiceService();
     const updated = await service.update(input);
+    revalidatePath("/", "layout");
     return { success: true as const, service: updated };
   } catch (error) {
     if (error instanceof ServiceNotFoundError) {

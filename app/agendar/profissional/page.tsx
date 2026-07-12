@@ -1,19 +1,19 @@
 import { redirect } from "next/navigation";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
-import { getPublicBarberProfileAction } from "@/modules/booking/actions/get-public-barber-profile.action";
+import { getPublicProfessionalProfileAction } from "@/modules/booking/actions/get-public-professional-profile.action";
 import { BookingHeader } from "@/modules/booking/components/booking-header";
-import { BarberProfile } from "@/modules/booking/components/barber-profile";
+import { ProfessionalProfile } from "@/modules/booking/components/professional-profile";
 
 export default async function ProfissionalPage({
   searchParams,
 }: {
-  searchParams: { barberId?: string };
+  searchParams: { professionalId?: string };
 }) {
-  if (!searchParams.barberId) redirect("/agendar/escolher");
+  if (!searchParams.professionalId) redirect("/agendar/escolher");
 
   const [settings, result] = await Promise.all([
     getGeneralSettingsAction(),
-    getPublicBarberProfileAction(searchParams.barberId),
+    getPublicProfessionalProfileAction(searchParams.professionalId),
   ]);
 
   if (!result.success) redirect("/agendar/escolher");
@@ -21,7 +21,7 @@ export default async function ProfissionalPage({
   return (
     <div>
       <BookingHeader logoUrl={settings.logoUrl} businessName={settings.name} backHref="/agendar/escolher" />
-      <BarberProfile profile={result.profile} />
+      <ProfessionalProfile profile={result.profile} />
     </div>
   );
 }

@@ -66,7 +66,7 @@ export function ClientList({ clients, options, canUpdate, canDelete }: ClientLis
                     {[client.phone, client.whatsapp, client.email].filter(Boolean).join(" · ") || "Sem contato"}
                   </p>
                   <p className="text-xs text-text-secondary">
-                    {client.preferredBarber ? `Prefere ${client.preferredBarber.professionalName} · ` : ""}
+                    {client.preferredProfessional ? `Prefere ${client.preferredProfessional.professionalName} · ` : ""}
                     Total gasto: {formatCurrency(client.totalSpent)}
                   </p>
                 </div>

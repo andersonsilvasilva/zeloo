@@ -5,14 +5,14 @@ import { formatDateOnlyBR, parseDateOnly } from "@/modules/appointments/utils/da
 import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { ConfirmButton } from "@/modules/booking/components/confirm-button";
-import { listPublicBarbersAction } from "@/modules/booking/actions/list-public-barbers.action";
+import { listPublicProfessionalsAction } from "@/modules/booking/actions/list-public-professionals.action";
 import { listPublicServicesAction } from "@/modules/booking/actions/list-public-services.action";
 
 export default async function ConfirmarPage({
   searchParams,
 }: {
   searchParams: {
-    barberId?: string;
+    professionalId?: string;
     serviceIds?: string;
     clientId?: string;
     phone?: string;
@@ -20,16 +20,16 @@ export default async function ConfirmarPage({
     time?: string;
   };
 }) {
-  const { barberId, serviceIds, clientId, phone, date, time } = searchParams;
-  if (!barberId || !serviceIds || !clientId || !phone || !date || !time) redirect("/agendar/escolher");
+  const { professionalId, serviceIds, clientId, phone, date, time } = searchParams;
+  if (!professionalId || !serviceIds || !clientId || !phone || !date || !time) redirect("/agendar/escolher");
 
-  const [settings, barbers, services] = await Promise.all([
+  const [settings, professionals, services] = await Promise.all([
     getGeneralSettingsAction(),
-    listPublicBarbersAction(),
+    listPublicProfessionalsAction(),
     listPublicServicesAction(),
   ]);
 
-  const barber = barbers.find((b) => b.id === barberId);
+  const professional = professionals.find((b) => b.id === professionalId);
   const serviceIdList = serviceIds.split(",").filter(Boolean);
   const selectedServices = services.filter((s) => serviceIdList.includes(s.id));
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0);
@@ -43,7 +43,7 @@ export default async function ConfirmarPage({
       <BookingHeader
         logoUrl={settings.logoUrl}
         businessName={settings.name}
-        backHref={`/agendar/horario?barberId=${barberId}&serviceIds=${serviceIds}&clientId=${clientId}&phone=${phone}`}
+        backHref={`/agendar/horario?professionalId=${professionalId}&serviceIds=${serviceIds}&clientId=${clientId}&phone=${phone}`}
       />
       <h1 className="mb-1 text-lg font-semibold text-booking-text">Confirme seu agendamento</h1>
       <p className="mb-6 text-sm text-booking-text-secondary">Dá uma conferida antes de fechar o horário.</p>
@@ -51,7 +51,7 @@ export default async function ConfirmarPage({
       <div className="space-y-3 rounded-xl bg-booking-card p-4 text-booking-card-foreground">
         <div>
           <p className="text-xs uppercase tracking-wide opacity-70">Profissional</p>
-          <p className="font-semibold">{barber?.professionalName ?? "—"}</p>
+          <p className="font-semibold">{professional?.professionalName ?? "—"}</p>
         </div>
         <div>
           <p className="text-xs uppercase tracking-wide opacity-70">Serviço(s)</p>
@@ -74,7 +74,7 @@ export default async function ConfirmarPage({
           input={{
             clientId,
             phone,
-            barberId,
+            professionalId,
             serviceIds: serviceIdList,
             appointmentDate,
             startTime,

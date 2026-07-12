@@ -145,7 +145,7 @@ export function AppointmentList({
                     )}
                   </div>
                   <p className="text-sm text-text-secondary">
-                    {appointment.client.name} · {appointment.barber.professionalName}
+                    {appointment.client.name} · {appointment.professional.professionalName}
                   </p>
                   <p className="text-sm text-text-secondary">
                     {appointment.services.map((s) => s.name).join(", ")} · {formatCurrency(appointment.totalPrice)} ·{" "}
@@ -220,7 +220,7 @@ export function AppointmentList({
           appointmentId={editing.id}
           defaultValues={{
             clientId: editing.client.id,
-            barberId: editing.barber.id,
+            professionalId: editing.professional.id,
             serviceIds: editing.services.map((s) => s.id),
             appointmentDate: editing.appointmentDate,
             startTime: editing.startTime,

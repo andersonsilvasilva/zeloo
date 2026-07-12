@@ -65,7 +65,7 @@ export class ClientPhoneMissingError extends Error {
 }
 
 /** Placeholders que dependem de um agendamento vinculado (ver {{clientName}}, sempre disponível). */
-const APPOINTMENT_PLACEHOLDERS = ["{{barber_agendado}}", "{{resumo_agendamento}}"];
+const APPOINTMENT_PLACEHOLDERS = ["{{professional_agendado}}", "{{resumo_agendamento}}"];
 
 /**
  * Regras de negócio de mensagens (templates + envio + histórico).
@@ -160,7 +160,7 @@ export class MessageService {
           client.name,
           settings.name,
           format(appointment.startTime, "dd/MM/yyyy 'às' HH:mm"),
-          appointment.barber.professionalName,
+          appointment.professional.professionalName,
           appointment.services.map((s) => s.service.name).join(", "),
         ];
       }
@@ -244,7 +244,7 @@ export class MessageService {
     return {
       id: appointment.id,
       startTime: appointment.startTime,
-      barberName: appointment.barber.professionalName,
+      professionalName: appointment.professional.professionalName,
       servicesLabel: appointment.services.map((s) => s.service.name).join(", "),
       totalPrice: appointment.services.reduce((sum, s) => sum + s.price.toNumber(), 0),
     };
@@ -261,7 +261,7 @@ export class MessageService {
     let rendered = content.replaceAll("{{clientName}}", clientName);
     if (appointment) {
       rendered = rendered
-        .replaceAll("{{barber_agendado}}", appointment.barber.professionalName)
+        .replaceAll("{{professional_agendado}}", appointment.professional.professionalName)
         .replaceAll("{{resumo_agendamento}}", this.buildAppointmentSummary(appointment));
     }
     return rendered;

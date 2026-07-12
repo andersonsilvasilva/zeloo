@@ -12,7 +12,7 @@ export interface ServiceListItem {
   category: string | null;
   status: ServiceStatus;
   photoUrl: string | null;
-  barbersCount: number;
+  professionalsCount: number;
   defaultMessageTemplateId: string | null;
   defaultMessageTemplateName: string | null;
 }

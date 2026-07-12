@@ -37,7 +37,7 @@ export function RegisterPaymentDialog({ appointments }: { appointments: PayableA
     () =>
       appointments.map((a) => ({
         value: a.id,
-        label: `${format(a.startTime, "dd/MM HH:mm")} — ${a.clientName} (${a.barberName}) — ${formatCurrency(
+        label: `${format(a.startTime, "dd/MM HH:mm")} — ${a.clientName} (${a.professionalName}) — ${formatCurrency(
           a.totalPrice,
         )}`,
       })),

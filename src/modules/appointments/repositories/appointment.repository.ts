@@ -7,7 +7,7 @@ type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const appointmentInclude = {
   client: { select: { id: true, name: true } },
-  barber: { select: { id: true, professionalName: true } },
+  professional: { select: { id: true, professionalName: true } },
   createdBy: { select: { id: true, name: true } },
   services: { include: { service: { select: { id: true, name: true } } } },
   payments: { select: { id: true } },
@@ -19,19 +19,19 @@ export class AppointmentRepository {
   constructor(private readonly db: PrismaOrTx = prisma) {}
 
   /**
-   * Verifica sobreposição de horário para um barbeiro.
+   * Verifica sobreposição de horário para um profissional.
    * Regra (spec item 17): existing.startTime < new.endTime AND existing.endTime > new.startTime
    * Considera apenas agendamentos ativos (não cancelados / não-comparecimento).
    */
   async hasConflict(params: {
-    barberId: string;
+    professionalId: string;
     startTime: Date;
     endTime: Date;
     excludeAppointmentId?: string;
   }) {
     const conflict = await this.db.appointment.findFirst({
       where: {
-        barberId: params.barberId,
+        professionalId: params.professionalId,
         id: params.excludeAppointmentId ? { not: params.excludeAppointmentId } : undefined,
         status: { notIn: ["CANCELLED", "NO_SHOW"] },
         startTime: { lt: params.endTime },
@@ -53,13 +53,13 @@ export class AppointmentRepository {
   async list(filters: {
     dateFrom?: Date;
     dateTo?: Date;
-    barberId?: string;
+    professionalId?: string;
     clientId?: string;
     status?: AppointmentStatus;
   }): Promise<AppointmentWithRelations[]> {
     return this.db.appointment.findMany({
       where: {
-        barberId: filters.barberId,
+        professionalId: filters.professionalId,
         clientId: filters.clientId,
         status: filters.status,
         appointmentDate:
@@ -83,7 +83,7 @@ export class AppointmentRepository {
   /** Reagenda um agendamento existente, substituindo os serviços vinculados. */
   async reschedule(params: {
     id: string;
-    barberId: string;
+    professionalId: string;
     appointmentDate: Date;
     startTime: Date;
     endTime: Date;
@@ -93,7 +93,7 @@ export class AppointmentRepository {
     return this.db.appointment.update({
       where: { id: params.id },
       data: {
-        barberId: params.barberId,
+        professionalId: params.professionalId,
         appointmentDate: params.appointmentDate,
         startTime: params.startTime,
         endTime: params.endTime,
@@ -107,15 +107,15 @@ export class AppointmentRepository {
     });
   }
 
-  async findActiveAppointmentsForBarberOnDate(
-    barberId: string,
+  async findActiveAppointmentsForProfessionalOnDate(
+    professionalId: string,
     dayStart: Date,
     dayEnd: Date,
     excludeAppointmentId?: string,
   ) {
     return this.db.appointment.findMany({
       where: {
-        barberId,
+        professionalId,
         id: excludeAppointmentId ? { not: excludeAppointmentId } : undefined,
         status: { notIn: ["CANCELLED", "NO_SHOW"] },
         startTime: { gte: dayStart, lt: dayEnd },
@@ -124,14 +124,14 @@ export class AppointmentRepository {
     });
   }
 
-  /** Barbeiro vinculado ao usuário logado, se houver — usado para restringir a própria agenda. */
-  async findBarberIdByUserId(userId: string): Promise<{ id: string } | null> {
-    return this.db.barber.findUnique({ where: { userId }, select: { id: true } });
+  /** Profissional vinculado ao usuário logado, se houver — usado para restringir a própria agenda. */
+  async findProfessionalIdByUserId(userId: string): Promise<{ id: string } | null> {
+    return this.db.professional.findUnique({ where: { userId }, select: { id: true } });
   }
 
-  async findBarberById(barberId: string) {
-    return this.db.barber.findUnique({
-      where: { id: barberId },
+  async findProfessionalById(professionalId: string) {
+    return this.db.professional.findUnique({
+      where: { id: professionalId },
       select: { id: true, professionalName: true, workingHours: true, status: true },
     });
   }
@@ -150,8 +150,8 @@ export class AppointmentRepository {
     });
   }
 
-  async listActiveBarbersWithServices() {
-    return this.db.barber.findMany({
+  async listActiveProfessionalsWithServices() {
+    return this.db.professional.findMany({
       where: { status: "ACTIVE" },
       select: {
         id: true,

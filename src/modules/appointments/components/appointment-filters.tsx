@@ -4,7 +4,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { appointmentStatusValues } from "@/modules/appointments/schemas/appointment.schema";
-import type { BarberOption } from "@/modules/appointments/types/appointment.types";
+import type { ProfessionalOption } from "@/modules/appointments/types/appointment.types";
 
 const STATUS_LABELS: Record<(typeof appointmentStatusValues)[number], string> = {
   PENDING: "Pendente",
@@ -17,12 +17,12 @@ const STATUS_LABELS: Record<(typeof appointmentStatusValues)[number], string> = 
 
 export interface AppointmentFiltersProps {
   date: string;
-  barberId: string;
+  professionalId: string;
   status: string;
-  barbers: BarberOption[];
+  professionals: ProfessionalOption[];
 }
 
-export function AppointmentFilters({ date, barberId, status, barbers }: AppointmentFiltersProps) {
+export function AppointmentFilters({ date, professionalId, status, professionals }: AppointmentFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,10 +51,10 @@ export function AppointmentFilters({ date, barberId, status, barbers }: Appointm
       </div>
 
       <div className="w-48 space-y-1">
-        <Label htmlFor="filter-barber">Barbeiro</Label>
-        <Select id="filter-barber" value={barberId} onChange={(e) => updateParam("barberId", e.target.value)}>
-          <option value="">Todos os barbeiros</option>
-          {barbers.map((b) => (
+        <Label htmlFor="filter-professional">Profissional</Label>
+        <Select id="filter-professional" value={professionalId} onChange={(e) => updateParam("professionalId", e.target.value)}>
+          <option value="">Todos os profissionais</option>
+          {professionals.map((b) => (
             <option key={b.id} value={b.id}>
               {b.professionalName}
             </option>

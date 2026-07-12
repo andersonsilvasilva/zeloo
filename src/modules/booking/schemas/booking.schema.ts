@@ -26,7 +26,7 @@ export const findExistingClientSchema = z.object({
 export type FindExistingClientInput = z.infer<typeof findExistingClientSchema>;
 
 export const publicAvailableSlotsSchema = z.object({
-  barberId: z.string().cuid(),
+  professionalId: z.string().cuid(),
   serviceIds: z.array(z.string().cuid()).min(1, "Selecione ao menos um serviço."),
   date: z.coerce.date(),
 });
@@ -36,7 +36,7 @@ export type PublicAvailableSlotsInput = z.infer<typeof publicAvailableSlotsSchem
 export const createPublicAppointmentSchema = z.object({
   clientId: z.string().cuid(),
   phone: z.string().trim().min(8).max(30),
-  barberId: z.string().cuid(),
+  professionalId: z.string().cuid(),
   serviceIds: z.array(z.string().cuid()).min(1, "Selecione ao menos um serviço."),
   appointmentDate: z.coerce.date(),
   startTime: z.coerce.date(),

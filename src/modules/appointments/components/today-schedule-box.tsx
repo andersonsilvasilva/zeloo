@@ -39,7 +39,7 @@ function LiveClock() {
 }
 
 export function TodayScheduleBox({ appointments, timezone }: TodayScheduleBoxProps) {
-  const showBarberName = new Set(appointments.map((a) => a.barber.id)).size > 1;
+  const showProfessionalName = new Set(appointments.map((a) => a.professional.id)).size > 1;
 
   return (
     <div className="rounded-xl border border-border bg-card p-5">
@@ -66,8 +66,8 @@ export function TodayScheduleBox({ appointments, timezone }: TodayScheduleBoxPro
                     {formatInBarbershopTz(appointment.startTime, timezone, "HH:mm")}
                   </span>
                   <span className="text-sm text-text">{appointment.client.name}</span>
-                  {showBarberName && (
-                    <span className="text-xs text-text-secondary">· {appointment.barber.professionalName}</span>
+                  {showProfessionalName && (
+                    <span className="text-xs text-text-secondary">· {appointment.professional.professionalName}</span>
                   )}
                 </div>
                 <AppointmentStatusBadge status={appointment.status} />

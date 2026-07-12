@@ -20,7 +20,7 @@ export function TimeSlotPicker({ slots, selected, onSelect, loading, timezone }:
   if (slots.length === 0) {
     return (
       <p className="text-sm text-text-secondary">
-        Selecione o serviço, o barbeiro e a data para ver os horários disponíveis.
+        Selecione o serviço, o profissional e a data para ver os horários disponíveis.
       </p>
     );
   }

@@ -6,10 +6,10 @@ import { IdentificationForm } from "@/modules/booking/components/identification-
 export default async function IdentificacaoPage({
   searchParams,
 }: {
-  searchParams: { barberId?: string; serviceIds?: string };
+  searchParams: { professionalId?: string; serviceIds?: string };
 }) {
-  const { barberId, serviceIds } = searchParams;
-  if (!barberId || !serviceIds) redirect("/agendar/escolher");
+  const { professionalId, serviceIds } = searchParams;
+  if (!professionalId || !serviceIds) redirect("/agendar/escolher");
 
   const settings = await getGeneralSettingsAction();
 
@@ -24,7 +24,7 @@ export default async function IdentificacaoPage({
       <p className="mb-6 text-sm text-booking-text-secondary">
         É rapidinho — só precisamos do seu nome e telefone para confirmar seu horário.
       </p>
-      <IdentificationForm barberId={barberId} serviceIds={serviceIds} />
+      <IdentificationForm professionalId={professionalId} serviceIds={serviceIds} />
     </div>
   );
 }

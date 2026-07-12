@@ -5,7 +5,7 @@ import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
  * são sempre pensados na hora local da barbearia (`Setting["barbershop.timezone"]`).
  * Construir/formatar `Date` com `setHours`/`format` ambíguos (que usam o fuso do
  * ambiente onde o código roda) causa deslocamento — ex.: "09:00" configurado pelo
- * barbeiro vira 09:00 UTC = 05:00 em America/Cuiaba (UTC-4) na hora de mostrar pro
+ * profissional vira 09:00 UTC = 05:00 em America/Cuiaba (UTC-4) na hora de mostrar pro
  * cliente. Use sempre estes helpers para qualquer `Date` que represente um horário
  * de agendamento (não confundir com `appointmentDate`, que é `@db.Date` e já tem
  * seu próprio utilitário em `date-only.ts`).

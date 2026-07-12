@@ -5,35 +5,35 @@ import { useRouter } from "next/navigation";
 import { Check, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import type { PublicBarberOption } from "@/modules/booking/types/booking.types";
+import type { PublicProfessionalOption } from "@/modules/booking/types/booking.types";
 
 export interface SelectionFormProps {
-  barbers: PublicBarberOption[];
+  professionals: PublicProfessionalOption[];
 }
 
-export function SelectionForm({ barbers }: SelectionFormProps) {
+export function SelectionForm({ professionals }: SelectionFormProps) {
   const router = useRouter();
-  const [barberId, setBarberId] = useState<string | null>(null);
+  const [professionalId, setProfessionalId] = useState<string | null>(null);
 
   function handleContinue() {
-    router.push(`/agendar/profissional?barberId=${barberId}`);
+    router.push(`/agendar/profissional?professionalId=${professionalId}`);
   }
 
   return (
     <div className="space-y-8">
       <section>
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-booking-primary">Profissional</h2>
-        {barbers.length === 0 ? (
+        {professionals.length === 0 ? (
           <p className="text-sm text-booking-text-secondary">Nenhum profissional disponível no momento.</p>
         ) : (
           <div className="flex flex-wrap gap-3">
-            {barbers.map((barber) => {
-              const selected = barberId === barber.id;
+            {professionals.map((professional) => {
+              const selected = professionalId === professional.id;
               return (
                 <button
-                  key={barber.id}
+                  key={professional.id}
                   type="button"
-                  onClick={() => setBarberId(barber.id)}
+                  onClick={() => setProfessionalId(professional.id)}
                   className={cn(
                     "flex items-center gap-2 rounded-full py-2 pl-2 pr-4 text-sm font-semibold transition-all focus-gold",
                     selected
@@ -47,14 +47,14 @@ export function SelectionForm({ barbers }: SelectionFormProps) {
                       selected ? "bg-booking-bg/20" : "bg-black/20",
                     )}
                   >
-                    {barber.photoUrl ? (
+                    {professional.photoUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={barber.photoUrl} alt={barber.professionalName} className="h-full w-full object-cover" />
+                      <img src={professional.photoUrl} alt={professional.professionalName} className="h-full w-full object-cover" />
                     ) : (
                       <Scissors size={14} />
                     )}
                   </span>
-                  {barber.professionalName}
+                  {professional.professionalName}
                   {selected && <Check size={14} strokeWidth={3} />}
                 </button>
               );
@@ -66,7 +66,7 @@ export function SelectionForm({ barbers }: SelectionFormProps) {
       <Button
         type="button"
         className="w-full bg-booking-primary text-booking-bg hover:bg-booking-primary-light"
-        disabled={!barberId}
+        disabled={!professionalId}
         onClick={handleContinue}
       >
         Continuar

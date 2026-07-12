@@ -1,4 +1,4 @@
-export interface PublicBarberOption {
+export interface PublicProfessionalOption {
   id: string;
   fullName: string;
   professionalName: string;
@@ -6,7 +6,7 @@ export interface PublicBarberOption {
   photoUrl: string | null;
 }
 
-export interface PublicBarberProfile extends PublicBarberOption {
+export interface PublicProfessionalProfile extends PublicProfessionalOption {
   services: PublicServiceOption[];
 }
 
@@ -27,7 +27,7 @@ export interface IdentifyClientResult {
 
 export interface PublicAppointmentSummary {
   id: string;
-  barberName: string;
+  professionalName: string;
   clientName: string;
   servicesLabel: string;
   totalPrice: number;

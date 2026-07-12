@@ -104,12 +104,12 @@ export function TemplateForm({ mode, templateId, defaultValues, onSuccess }: Tem
         <Textarea
           id="content"
           rows={4}
-          placeholder="Olá {{clientName}}, tudo bem? Passando para confirmar seu horário com {{barber_agendado}}: {{resumo_agendamento}}."
+          placeholder="Olá {{clientName}}, tudo bem? Passando para confirmar seu horário com {{professional_agendado}}: {{resumo_agendamento}}."
           {...register("content")}
         />
         {errors.content && <p className="text-sm text-danger">{errors.content.message}</p>}
         <p className="text-xs text-text-secondary">
-          Variáveis disponíveis: {"{{clientName}}"} (nome do cliente), {"{{barber_agendado}}"} (barbeiro do
+          Variáveis disponíveis: {"{{clientName}}"} (nome do cliente), {"{{professional_agendado}}"} (profissional do
           agendamento) e {"{{resumo_agendamento}}"} (serviços, data/hora e valor). As duas últimas exigem que um
           agendamento seja selecionado ao enviar.
         </p>

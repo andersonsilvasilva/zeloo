@@ -56,8 +56,8 @@ O projeto tem **duas frentes**:
 
 | | |
 |---|---|
-| 🌐 **Vitrine pública** (`/agendar`) | Cliente final escolhe barbeiro e serviço, se identifica (com ou sem conta) e agenda seu próprio horário — sem precisar de login prévio. |
-| 🔐 **Painel interno** (`/`) | Equipe da barbearia (admin, atendente, barbeiro, caixa) gerencia agenda, clientes, financeiro, relatórios, mensagens e usuários, cada um enxergando só o que sua permissão libera. |
+| 🌐 **Vitrine pública** (`/agendar`) | Cliente final escolhe profissional e serviço, se identifica (com ou sem conta) e agenda seu próprio horário — sem precisar de login prévio. |
+| 🔐 **Painel interno** (`/`) | Equipe da barbearia (admin, atendente, profissional, caixa) gerencia agenda, clientes, financeiro, relatórios, mensagens e usuários, cada um enxergando só o que sua permissão libera. |
 
 ---
 
@@ -65,7 +65,7 @@ O projeto tem **duas frentes**:
 
 ### Vitrine pública de agendamento (`/agendar`)
 - Landing com logomarca, nome da barbearia e mensagem de marketing configuráveis
-- Escolha do barbeiro, seguida de uma página de perfil dele (foto, bio e só os serviços que ele especificamente oferece, com preço e duração)
+- Escolha do profissional, seguida de uma página de perfil dele (foto, bio e só os serviços que ele especificamente oferece, com preço e duração)
 - Identificação rápida por nome + telefone (sem senha) — com busca automática de cadastro existente pelo telefone (mostra o nome encontrado para o visitante confirmar) — ou criação de conta opcional (e-mail + senha) para acompanhar o histórico depois
 - Calendário com disponibilidade em tempo real (reaproveita a mesma lógica de conflito de horário do painel interno) e seleção de horário
 - Confirmação com resumo e valor total, com auto-envio de confirmação por WhatsApp quando aplicável
@@ -73,10 +73,10 @@ O projeto tem **duas frentes**:
 ### Painel interno
 - **Dashboard** com indicadores do dia/semana/mês/ano, gráficos de faturamento e distribuição de serviços, relógio digital ao vivo com a agenda do dia e box de aniversariantes (hoje/semana/mês)
 - **Agenda**: CRUD completo de agendamentos com checagem automática de conflito de horário, fluxo de status (`Pendente → Confirmado → Em atendimento → Concluído`, com `Cancelado`/`Não compareceu`), reagendamento, atalho para registrar pagamento direto na lista e exclusão definitiva restrita ao Administrador (bloqueada se já houver pagamento registrado)
-- **Clientes**, **Barbeiros** e **Serviços**: CRUD completo com upload de fotos (thumbnail/média/grande gerados automaticamente)
+- **Clientes**, **Profissionais** e **Serviços**: CRUD completo com upload de fotos (thumbnail/média/grande gerados automaticamente)
 - **Financeiro**: abertura/fechamento de caixa, livro-caixa (entradas/saídas), registro de pagamentos e **Balancete débito/crédito** por categoria, com impressão/exportação em PDF
-- **Relatórios**: indicadores por período customizável (diferente dos buckets fixos do dashboard), com impressão/exportação em PDF — barbeiros veem automaticamente só os próprios números
-- **Mensagens**: modelos de mensagem com variáveis dinâmicas (`{{clientName}}`, `{{barber_agendado}}`, `{{resumo_agendamento}}`), envio manual ou automático ao criar/concluir agendamento, e **envio real via WhatsApp Cloud API**
+- **Relatórios**: indicadores por período customizável (diferente dos buckets fixos do dashboard), com impressão/exportação em PDF — profissionais veem automaticamente só os próprios números
+- **Mensagens**: modelos de mensagem com variáveis dinâmicas (`{{clientName}}`, `{{professional_agendado}}`, `{{resumo_agendamento}}`), envio manual ou automático ao criar/concluir agendamento, e **envio real via WhatsApp Cloud API**
 - **Usuários e permissões**: gestão de contas da equipe e papéis (RBAC configurável pela própria interface)
 - **Configurações**: logomarca, nome, fuso horário e dados da barbearia
 
@@ -132,14 +132,14 @@ O fluxo público (`/agendar`) vive em `src/modules/booking/` e **nunca confia nu
 | Papel | Escopo |
 |---|---|
 | `ADMIN` | Acesso total |
-| `ATTENDANT` | Clientes, agenda, barbeiros/serviços (leitura) — sem financeiro |
-| `BARBER` | Agenda e relatórios **restritos aos próprios atendimentos** — nunca vê financeiro de outros barbeiros |
+| `ATTENDANT` | Clientes, agenda, profissionais/serviços (leitura) — sem financeiro |
+| `PROFESSIONAL` | Agenda e relatórios **restritos aos próprios atendimentos** — nunca vê financeiro de outros profissionais |
 | `CASHIER` | Financeiro + agenda + clientes |
 | `CLIENT` | Auto-agendamento (`/agendar`) |
 
 Permissões centralizadas em `src/lib/auth/permissions.ts` (ex.: `clients.view`, `finance.create`, `appointments.cancel`). A checagem **nunca** é feita como `if (role === "ADMIN")` — sempre via `requirePermission()` (`src/lib/auth/rbac.ts`), que consulta a relação `Role → RolePermission → Permission` no banco. Isso permite ao Administrador reconfigurar permissões pela própria tela de **Usuários**, sem alterar código.
 
-> **Regra de negócio importante:** o papel `BARBER` nunca recebe permissões `finance.*` — barbeiros não devem visualizar informações financeiras globais da barbearia.
+> **Regra de negócio importante:** o papel `PROFESSIONAL` nunca recebe permissões `finance.*` — profissionais não devem visualizar informações financeiras globais da barbearia.
 
 ---
 
@@ -167,7 +167,7 @@ Acesse `http://localhost:3000`.
 **Login padrão criado pelo seed** (troque a senha imediatamente em produção):
 
 - E-mail: `admin@barbershop.local`
-- Senha: `Admin@123`
+- Senha: `Admin@0123`
 
 ---
 
@@ -191,7 +191,7 @@ Veja todos os valores de exemplo em [`.env.example`](.env.example).
 
 ## 🗄️ Banco de dados
 
-Schema completo em [`prisma/schema.prisma`](prisma/schema.prisma) — 20 models cobrindo autenticação/RBAC, clientes, barbeiros, serviços, agendamentos, financeiro, mensageria, mídia e auditoria.
+Schema completo em [`prisma/schema.prisma`](prisma/schema.prisma) — 20 models cobrindo autenticação/RBAC, clientes, profissionais, serviços, agendamentos, financeiro, mensageria, mídia e auditoria.
 
 ```bash
 npm run prisma:migrate     # aplica migrations em dev
@@ -206,11 +206,11 @@ npm run prisma:generate    # gera o Prisma Client
 ## 🎭 Dados fictícios (seed de demonstração)
 
 ```bash
-npm run prisma:seed:demo               # barbeiros, clientes, serviços, equipe de teste
+npm run prisma:seed:demo               # profissionais, clientes, serviços, equipe de teste
 npm run prisma:seed:demo:appointments  # histórico de agendamentos/pagamentos (últimos ~60 dias + próximos dias)
 ```
 
-Usuários fictícios (barbeiros/atendentes/caixa) usam a senha `Teste@123`.
+Usuários fictícios (profissionais/atendentes/caixa) usam a senha `Teste@123`.
 
 ---
 
@@ -221,7 +221,7 @@ O envio de mensagens (confirmação automática de agendamento, modelos manuais)
 Pontos de atenção:
 - Fora da janela de 24h de uma conversa iniciada pelo cliente, a Meta só aceita mensagens de **template pré-aprovado** — configure `WHATSAPP_TEMPLATE_NAME`/`WHATSAPP_TEMPLATE_LANGUAGE` com um template aprovado no [Meta Business Manager](https://business.facebook.com/).
 - Números de teste precisam estar na lista de destinatários autorizados enquanto o app estiver em modo de desenvolvimento na Meta.
-- Template próprio `confirmacao_agendamento` (pt_BR, categoria UTILITY) submetido para aprovação em 2026-07-11, com variáveis para nome do cliente, nome da barbearia, data/hora, barbeiro e serviços — `sendWhatsAppTemplateMessage` já monta e envia esses valores quando o template ativo não é o `hello_world` de exemplo.
+- Template próprio `confirmacao_agendamento` (pt_BR, categoria UTILITY) submetido para aprovação em 2026-07-11, com variáveis para nome do cliente, nome da barbearia, data/hora, profissional e serviços — `sendWhatsAppTemplateMessage` já monta e envia esses valores quando o template ativo não é o `hello_world` de exemplo.
 
 ---
 
@@ -229,7 +229,7 @@ Pontos de atenção:
 
 Vitest e Playwright já estão nas dependências, mas ainda **não há uma suíte de testes automatizados commitada** — a validação de cada funcionalidade nesta fase foi feita via scripts Playwright avulsos (fluxo completo no navegador) durante o desenvolvimento, descartados após o uso. Escrever a suíte definitiva é o próximo passo natural (ver [Roadmap](#-roadmap)).
 
-Prioridades sugeridas: login e permissões, CRUD de cliente/barbeiro/serviço, agendamento e conflito de horários, cancelamento, registro de pagamento, entrada no livro-caixa, fechamento de caixa e o fluxo público de auto-agendamento (com e sem conta).
+Prioridades sugeridas: login e permissões, CRUD de cliente/profissional/serviço, agendamento e conflito de horários, cancelamento, registro de pagamento, entrada no livro-caixa, fechamento de caixa e o fluxo público de auto-agendamento (com e sem conta).
 
 ---
 
@@ -271,7 +271,7 @@ src/
   components/ui/          # Design System (Button, Input, Dialog, Select...)
   components/shared/       # componentes compostos reutilizáveis entre módulos
   modules/
-    auth/ users/ clients/ barbers/ services/ appointments/
+    auth/ users/ clients/ professionals/ services/ appointments/
     finance/ reports/ messages/ settings/ booking/
       actions/ services/ repositories/ schemas/ types/ components/
   lib/
@@ -284,7 +284,7 @@ prisma/
   schema.prisma
   migrations/
   seed.ts                     # RBAC + admin + configurações padrão (npm run prisma:seed)
-  seed-demo.ts                 # barbeiros/clientes/serviços fictícios
+  seed-demo.ts                 # profissionais/clientes/serviços fictícios
   seed-demo-appointments.ts    # histórico fictício de agendamentos (npm run prisma:seed:demo:appointments)
 ```
 

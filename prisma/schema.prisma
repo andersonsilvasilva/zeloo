@@ -42,7 +42,7 @@ model User {
 
   roles                UserRole[]
   client               Client?
-  barber               Barber?
+  professional         Professional?
   auditLogs            AuditLog[]
   cashRegistersOpened  CashRegister[]        @relation("CashRegisterOpenedBy")
   cashRegisterClosings CashRegisterClosing[] @relation("CashRegisterClosedBy")
@@ -66,7 +66,7 @@ enum UserStatus {
 model Role {
   id          String  @id @default(cuid())
   name        String
-  slug        String  @unique // ADMIN, BARBER, ATTENDANT, CASHIER, CLIENT
+  slug        String  @unique // ADMIN, PROFESSIONAL, ATTENDANT, CASHIER, CLIENT
   description String? @db.Text
 
   permissions RolePermission[]
@@ -125,31 +125,31 @@ model UserRole {
 // ----------------------------------------------------------------------------
 
 model Client {
-  id                String       @id @default(cuid())
-  userId            String?      @unique @map("user_id")
-  name              String
-  phone             String?
-  whatsapp          String?
-  email             String?
-  birthDate         DateTime?    @map("birth_date")
-  notes             String?      @db.Text
-  preferredBarberId String?      @map("preferred_barber_id")
-  status            ClientStatus @default(ACTIVE)
-  totalSpent        Decimal      @default(0) @map("total_spent") @db.Decimal(12, 2)
-  lastAppointmentAt DateTime?    @map("last_appointment_at")
-  profileImageId    String?      @map("profile_image_id")
+  id                      String       @id @default(cuid())
+  userId                  String?      @unique @map("user_id")
+  name                    String
+  phone                   String?
+  whatsapp                String?
+  email                   String?
+  birthDate               DateTime?    @map("birth_date")
+  notes                   String?      @db.Text
+  preferredProfessionalId String?      @map("preferred_professional_id")
+  status                  ClientStatus @default(ACTIVE)
+  totalSpent              Decimal      @default(0) @map("total_spent") @db.Decimal(12, 2)
+  lastAppointmentAt       DateTime?    @map("last_appointment_at")
+  profileImageId          String?      @map("profile_image_id")
 
-  user            User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
-  preferredBarber Barber?       @relation("PreferredBarber", fields: [preferredBarberId], references: [id], onDelete: SetNull)
-  profileImage    Media?        @relation("ClientProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
-  appointments    Appointment[]
-  messageLogs     MessageLog[]
+  user                  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  preferredProfessional Professional? @relation("PreferredProfessional", fields: [preferredProfessionalId], references: [id], onDelete: SetNull)
+  profileImage          Media?        @relation("ClientProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
+  appointments          Appointment[]
+  messageLogs           MessageLog[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([status])
-  @@index([preferredBarberId])
+  @@index([preferredProfessionalId])
   @@map("clients")
 }
 
@@ -163,36 +163,36 @@ enum ClientStatus {
 // BARBEIROS
 // ----------------------------------------------------------------------------
 
-model Barber {
-  id                   String       @id @default(cuid())
-  userId               String?      @unique @map("user_id")
-  fullName             String       @map("full_name")
-  professionalName     String       @map("professional_name")
-  bio                  String?      @db.Text
-  specialties          String?      @db.Text // CSV ou JSON de especialidades
+model Professional {
+  id                   String             @id @default(cuid())
+  userId               String?            @unique @map("user_id")
+  fullName             String             @map("full_name")
+  professionalName     String             @map("professional_name")
+  bio                  String?            @db.Text
+  specialties          String?            @db.Text // CSV ou JSON de especialidades
   phone                String?
   whatsapp             String?
   email                String?
-  hiredAt              DateTime?    @map("hired_at")
-  status               BarberStatus @default(ACTIVE)
-  commissionPercentage Decimal      @default(0) @map("commission_percentage") @db.Decimal(5, 2)
-  profileImageId       String?      @map("profile_image_id")
-  workingHours         Json?        @map("working_hours") // { "mon": ["09:00-19:00"], ... }
+  hiredAt              DateTime?          @map("hired_at")
+  status               ProfessionalStatus @default(ACTIVE)
+  commissionPercentage Decimal            @default(0) @map("commission_percentage") @db.Decimal(5, 2)
+  profileImageId       String?            @map("profile_image_id")
+  workingHours         Json?              @map("working_hours") // { "mon": ["09:00-19:00"], ... }
 
-  user               User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
-  profileImage       Media?          @relation("BarberProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
-  services           BarberService[]
+  user               User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  profileImage       Media?                @relation("ProfessionalProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
+  services           ProfessionalService[]
   appointments       Appointment[]
-  preferredByClients Client[]        @relation("PreferredBarber")
+  preferredByClients Client[]              @relation("PreferredProfessional")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([status])
-  @@map("barbers")
+  @@map("professionals")
 }
 
-enum BarberStatus {
+enum ProfessionalStatus {
   ACTIVE
   INACTIVE
   VACATION
@@ -215,9 +215,9 @@ model Service {
   advertisingImageId       String?       @map("advertising_image_id")
   defaultMessageTemplateId String?       @map("default_message_template_id")
 
-  advertisingImage       Media?               @relation("ServiceAdvertisingImage", fields: [advertisingImageId], references: [id], onDelete: SetNull)
-  defaultMessageTemplate MessageTemplate?     @relation(fields: [defaultMessageTemplateId], references: [id], onDelete: SetNull)
-  barbers                BarberService[]
+  advertisingImage       Media?                @relation("ServiceAdvertisingImage", fields: [advertisingImageId], references: [id], onDelete: SetNull)
+  defaultMessageTemplate MessageTemplate?      @relation(fields: [defaultMessageTemplateId], references: [id], onDelete: SetNull)
+  professionals          ProfessionalService[]
   appointmentServices    AppointmentService[]
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -233,22 +233,22 @@ enum ServiceStatus {
   INACTIVE
 }
 
-model BarberService {
+model ProfessionalService {
   id                    String        @id @default(cuid())
-  barberId              String        @map("barber_id")
+  professionalId        String        @map("professional_id")
   serviceId             String        @map("service_id")
   customPrice           Decimal?      @map("custom_price") @db.Decimal(12, 2)
   customDurationMinutes Int?          @map("custom_duration_minutes")
   status                ServiceStatus @default(ACTIVE)
 
-  barber  Barber  @relation(fields: [barberId], references: [id], onDelete: Cascade)
-  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  professional Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  service      Service      @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([barberId, serviceId])
-  @@map("barber_services")
+  @@unique([professionalId, serviceId])
+  @@map("professional_services")
 }
 
 // ----------------------------------------------------------------------------
@@ -258,7 +258,7 @@ model BarberService {
 model Appointment {
   id              String            @id @default(cuid())
   clientId        String            @map("client_id")
-  barberId        String            @map("barber_id")
+  professionalId  String            @map("professional_id")
   appointmentDate DateTime          @map("appointment_date") @db.Date
   startTime       DateTime          @map("start_time")
   endTime         DateTime          @map("end_time")
@@ -266,16 +266,16 @@ model Appointment {
   notes           String?           @db.Text
   createdById     String?           @map("created_by_id")
 
-  client    Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  barber    Barber               @relation(fields: [barberId], references: [id], onDelete: Cascade)
-  createdBy User?                @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  services  AppointmentService[]
-  payments  Payment[]
+  client       Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  professional Professional         @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  createdBy    User?                @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  services     AppointmentService[]
+  payments     Payment[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@index([barberId])
+  @@index([professionalId])
   @@index([clientId])
   @@index([appointmentDate])
   @@index([status])
@@ -485,9 +485,9 @@ model Media {
   width           Int?
   height          Int?
 
-  clientsUsing  Client[]  @relation("ClientProfileImage")
-  barbersUsing  Barber[]  @relation("BarberProfileImage")
-  servicesUsing Service[] @relation("ServiceAdvertisingImage")
+  clientsUsing       Client[]       @relation("ClientProfileImage")
+  professionalsUsing Professional[] @relation("ProfessionalProfileImage")
+  servicesUsing      Service[]      @relation("ServiceAdvertisingImage")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -498,7 +498,7 @@ model Media {
 enum MediaType {
   LOGO
   CLIENT_PROFILE
-  BARBER_PROFILE
+  PROFESSIONAL_PROFILE
   SERVICE_ADVERTISING
 }
 

@@ -5,7 +5,7 @@ import type { ClientStatus } from "@/modules/clients/schemas/client.schema";
 type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const clientInclude = {
-  preferredBarber: { select: { id: true, professionalName: true } },
+  preferredProfessional: { select: { id: true, professionalName: true } },
   profileImage: { select: { storagePath: true } },
 } satisfies Prisma.ClientInclude;
 
@@ -18,11 +18,11 @@ export class ClientRepository {
     return this.db.client.findUnique({ where: { id }, include: clientInclude });
   }
 
-  async list(filters: { search?: string; status?: ClientStatus; preferredBarberId?: string }) {
+  async list(filters: { search?: string; status?: ClientStatus; preferredProfessionalId?: string }) {
     return this.db.client.findMany({
       where: {
         status: filters.status,
-        preferredBarberId: filters.preferredBarberId,
+        preferredProfessionalId: filters.preferredProfessionalId,
         ...(filters.search
           ? {
               OR: [
@@ -67,8 +67,8 @@ export class ClientRepository {
     await this.db.media.deleteMany({ where: { id } });
   }
 
-  async listActiveBarbersForSelect(): Promise<{ id: string; professionalName: string }[]> {
-    return this.db.barber.findMany({
+  async listActiveProfessionalsForSelect(): Promise<{ id: string; professionalName: string }[]> {
+    return this.db.professional.findMany({
       where: { status: "ACTIVE" },
       select: { id: true, professionalName: true },
       orderBy: { professionalName: "asc" },

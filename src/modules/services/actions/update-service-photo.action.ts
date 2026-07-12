@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { serviceIdSchema } from "@/modules/services/schemas/service.schema";
@@ -30,6 +31,7 @@ export async function updateServicePhotoAction(formData: FormData) {
   try {
     const service = new ServiceService();
     const url = await service.updatePhoto(id, { buffer, originalName: file.name, mimeType: file.type });
+    revalidatePath("/", "layout");
     return { success: true as const, url };
   } catch (error) {
     return { success: false as const, error: error instanceof Error ? error.message : "Falha ao enviar a imagem." };

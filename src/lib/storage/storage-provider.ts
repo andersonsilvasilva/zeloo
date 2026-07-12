@@ -1,7 +1,7 @@
 /**
  * Abstração de armazenamento de arquivos.
  *
- * Nenhum módulo de domínio (barbers, services, settings) deve importar
+ * Nenhum módulo de domínio (professionals, services, settings) deve importar
  * `fs` ou um SDK de storage diretamente — todos usam esta interface,
  * injetada via `getStorageProvider()`.
  *
@@ -16,7 +16,7 @@ export interface UploadInput {
   buffer: Buffer;
   originalName: string;
   mimeType: string;
-  /** Pasta lógica dentro do provider, ex: "barbers", "services", "logo" */
+  /** Pasta lógica dentro do provider, ex: "professionals", "services", "logo" */
   folder: string;
 }
 

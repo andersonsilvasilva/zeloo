@@ -50,15 +50,15 @@ async function main() {
     return;
   }
 
-  const barbers = await prisma.barber.findMany({ select: { id: true } });
+  const professionals = await prisma.professional.findMany({ select: { id: true } });
   const clients = await prisma.client.findMany({ select: { id: true } });
   const staff = await prisma.user.findMany({
     where: { roles: { some: { role: { slug: { in: ["ATTENDANT", "CASHIER"] } } } } },
     select: { id: true },
   });
 
-  if (barbers.length === 0 || clients.length === 0) {
-    console.log("Nenhum barbeiro ou cliente encontrado. Rode `npm run prisma:seed:demo` primeiro.");
+  if (professionals.length === 0 || clients.length === 0) {
+    console.log("Nenhum profissional ou cliente encontrado. Rode `npm run prisma:seed:demo` primeiro.");
     return;
   }
 
@@ -73,13 +73,13 @@ async function main() {
     ),
   );
 
-  console.log("Vinculando serviços aos barbeiros...");
-  for (const barber of barbers) {
+  console.log("Vinculando serviços aos profissionais...");
+  for (const professional of professionals) {
     for (const service of services) {
-      await prisma.barberService.upsert({
-        where: { barberId_serviceId: { barberId: barber.id, serviceId: service.id } },
+      await prisma.professionalService.upsert({
+        where: { professionalId_serviceId: { professionalId: professional.id, serviceId: service.id } },
         update: {},
-        create: { barberId: barber.id, serviceId: service.id },
+        create: { professionalId: professional.id, serviceId: service.id },
       });
     }
   }
@@ -95,7 +95,7 @@ async function main() {
     if (day.getDay() === 0) continue; // fechado aos domingos
     const isFuture = day > startOfDay(now);
 
-    for (const barber of barbers) {
+    for (const professional of professionals) {
       const appointmentsToday = isFuture ? (Math.random() < 0.5 ? 1 : 0) : Math.floor(Math.random() * 3);
       const slots = pickN(TIME_SLOTS, appointmentsToday);
 
@@ -121,7 +121,7 @@ async function main() {
         await prisma.appointment.create({
           data: {
             clientId: client.id,
-            barberId: barber.id,
+            professionalId: professional.id,
             appointmentDate: startOfDay(day),
             startTime,
             endTime,

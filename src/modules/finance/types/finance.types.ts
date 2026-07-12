@@ -47,7 +47,7 @@ export interface BalanceteSummary {
 export interface PayableAppointmentOption {
   id: string;
   clientName: string;
-  barberName: string;
+  professionalName: string;
   servicesLabel: string;
   totalPrice: number;
   appointmentDate: Date;

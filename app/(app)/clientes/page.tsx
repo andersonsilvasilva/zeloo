@@ -11,7 +11,7 @@ import type { ClientStatus } from "@/modules/clients/types/client.types";
 export default async function ClientesPage({
   searchParams,
 }: {
-  searchParams: { search?: string; status?: string; barberId?: string };
+  searchParams: { search?: string; status?: string; professionalId?: string };
 }) {
   const canView = await hasPermission(PERMISSIONS.clients.view);
   if (!canView) return <ComingSoon title="Clientes" />;
@@ -24,14 +24,14 @@ export default async function ClientesPage({
 
   const search = searchParams.search || "";
   const status = searchParams.status || "";
-  const barberId = searchParams.barberId || "";
+  const professionalId = searchParams.professionalId || "";
 
   const [options, clients] = await Promise.all([
     getClientFormOptionsAction(),
     listClientsAction({
       search: search || undefined,
       status: (status || undefined) as ClientStatus | undefined,
-      preferredBarberId: barberId || undefined,
+      preferredProfessionalId: professionalId || undefined,
     }),
   ]);
 
@@ -45,7 +45,7 @@ export default async function ClientesPage({
         {canCreate && <NewClientButton options={options} />}
       </div>
 
-      <ClientFilters search={search} status={status} preferredBarberId={barberId} barbers={options.barbers} />
+      <ClientFilters search={search} status={status} preferredProfessionalId={professionalId} professionals={options.professionals} />
 
       <ClientList clients={clients} options={options} canUpdate={canUpdate} canDelete={canDelete} />
     </div>

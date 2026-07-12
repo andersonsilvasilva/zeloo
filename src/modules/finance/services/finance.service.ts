@@ -234,7 +234,7 @@ export class FinanceService {
     return {
       id: appointment.id,
       clientName: appointment.client.name,
-      barberName: appointment.barber.professionalName,
+      professionalName: appointment.professional.professionalName,
       servicesLabel: appointment.services.map((s) => s.service.name).join(", "),
       totalPrice: appointment.services.reduce((sum, s) => sum + s.price.toNumber(), 0),
       appointmentDate: appointment.appointmentDate,

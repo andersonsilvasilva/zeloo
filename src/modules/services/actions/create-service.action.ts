@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { requirePermission, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { createServiceSchema, type CreateServiceInput } from "@/modules/services/schemas/service.schema";
@@ -13,5 +14,7 @@ export async function createServiceAction(rawInput: CreateServiceInput) {
 
   const service = new ServiceService();
   const created = await service.create(input);
+  // Serviço aparece em /servicos (painel) e em /agendar/profissional (vitrine pública).
+  revalidatePath("/", "layout");
   return { success: true as const, service: created };
 }

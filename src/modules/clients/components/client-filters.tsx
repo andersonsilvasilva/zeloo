@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { clientStatusValues } from "@/modules/clients/schemas/client.schema";
-import type { ClientBarberOption } from "@/modules/clients/types/client.types";
+import type { ClientProfessionalOption } from "@/modules/clients/types/client.types";
 
 const STATUS_LABELS: Record<(typeof clientStatusValues)[number], string> = {
   ACTIVE: "Ativo",
@@ -16,11 +16,11 @@ const STATUS_LABELS: Record<(typeof clientStatusValues)[number], string> = {
 export interface ClientFiltersProps {
   search: string;
   status: string;
-  preferredBarberId: string;
-  barbers: ClientBarberOption[];
+  preferredProfessionalId: string;
+  professionals: ClientProfessionalOption[];
 }
 
-export function ClientFilters({ search, status, preferredBarberId, barbers }: ClientFiltersProps) {
+export function ClientFilters({ search, status, preferredProfessionalId, professionals }: ClientFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,14 +51,14 @@ export function ClientFilters({ search, status, preferredBarberId, barbers }: Cl
       </div>
 
       <div className="w-48 space-y-1">
-        <Label htmlFor="filter-barber">Barbeiro preferido</Label>
+        <Label htmlFor="filter-professional">Profissional preferido</Label>
         <Select
-          id="filter-barber"
-          value={preferredBarberId}
-          onChange={(e) => updateParam("barberId", e.target.value)}
+          id="filter-professional"
+          value={preferredProfessionalId}
+          onChange={(e) => updateParam("professionalId", e.target.value)}
         >
           <option value="">Todos</option>
-          {barbers.map((b) => (
+          {professionals.map((b) => (
             <option key={b.id} value={b.id}>
               {b.professionalName}
             </option>

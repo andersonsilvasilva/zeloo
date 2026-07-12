@@ -21,7 +21,7 @@ import type {
 
 export class AppointmentConflictError extends Error {
   constructor() {
-    super("Este barbeiro já possui um agendamento nesse horário.");
+    super("Este profissional já possui um agendamento nesse horário.");
     this.name = "AppointmentConflictError";
   }
 }
@@ -57,7 +57,7 @@ const STATUS_TRANSITIONS: Record<AppointmentStatus, AppointmentStatus[]> = {
   NO_SHOW: [],
 };
 
-/** Chaves de dia da semana usadas em Barber.workingHours (ver prisma/seed-demo.ts). Index = Date#getDay(). */
+/** Chaves de dia da semana usadas em Professional.workingHours (ver prisma/seed-demo.ts). Index = Date#getDay(). */
 const WEEKDAY_KEYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"] as const;
 
 /** Granularidade dos horários sugeridos na agenda. */
@@ -83,7 +83,7 @@ export class AppointmentService {
 
       // Checagem de conflito DENTRO da transação, para evitar race conditions.
       const conflict = await repo.hasConflict({
-        barberId: input.barberId,
+        professionalId: input.professionalId,
         startTime: input.startTime,
         endTime,
       });
@@ -92,7 +92,7 @@ export class AppointmentService {
       const appointment = await tx.appointment.create({
         data: {
           clientId: input.clientId,
-          barberId: input.barberId,
+          professionalId: input.professionalId,
           appointmentDate: input.appointmentDate,
           startTime: input.startTime,
           endTime,
@@ -130,7 +130,7 @@ export class AppointmentService {
       const endTime = new Date(input.startTime.getTime() + totalDuration * 60_000);
 
       const conflict = await repo.hasConflict({
-        barberId: input.barberId,
+        professionalId: input.professionalId,
         startTime: input.startTime,
         endTime,
         excludeAppointmentId: input.id,
@@ -139,7 +139,7 @@ export class AppointmentService {
 
       const appointment = await repo.reschedule({
         id: input.id,
-        barberId: input.barberId,
+        professionalId: input.professionalId,
         appointmentDate: input.appointmentDate,
         startTime: input.startTime,
         endTime,
@@ -203,15 +203,15 @@ export class AppointmentService {
   /**
    * Agenda do dia para o box "próximos atendimentos" do dashboard — só os
    * status ainda ativos (exclui concluídos/cancelados/não-comparecimento).
-   * Se o usuário logado for um barbeiro, mostra só a própria agenda.
+   * Se o usuário logado for um profissional, mostra só a própria agenda.
    */
   async listToday(userId: string): Promise<AppointmentListItem[]> {
     const repo = new AppointmentRepository();
-    const barber = await repo.findBarberIdByUserId(userId);
+    const professional = await repo.findProfessionalIdByUserId(userId);
     const timezone = await this.getTimezone();
     const today = todayInTimezone(timezone);
 
-    const appointments = await repo.list({ dateFrom: today, dateTo: today, barberId: barber?.id });
+    const appointments = await repo.list({ dateFrom: today, dateTo: today, professionalId: professional?.id });
     return appointments
       .filter((a) => ["PENDING", "CONFIRMED", "IN_PROGRESS"].includes(a.status))
       .map((a) => this.toListItem(a));
@@ -219,9 +219,9 @@ export class AppointmentService {
 
   async getFormOptions(): Promise<AppointmentFormOptions> {
     const repo = new AppointmentRepository();
-    const [services, barbers, clients, timezone] = await Promise.all([
+    const [services, professionals, clients, timezone] = await Promise.all([
       repo.listActiveServices(),
-      repo.listActiveBarbersWithServices(),
+      repo.listActiveProfessionalsWithServices(),
       repo.listActiveClients(),
       this.getTimezone(),
     ]);
@@ -233,7 +233,7 @@ export class AppointmentService {
         price: s.price.toNumber(),
         durationMinutes: s.durationMinutes,
       })),
-      barbers: barbers.map((b) => ({
+      professionals: professionals.map((b) => ({
         id: b.id,
         professionalName: b.professionalName,
         serviceIds: b.services.map((bs) => bs.serviceId),
@@ -244,32 +244,32 @@ export class AppointmentService {
   }
 
   /**
-   * Calcula horários disponíveis para um barbeiro em uma data, a partir do
-   * expediente (Barber.workingHours) descontando agendamentos já ativos e
+   * Calcula horários disponíveis para um profissional em uma data, a partir do
+   * expediente (Professional.workingHours) descontando agendamentos já ativos e
    * a duração total dos serviços selecionados.
    */
   async getAvailableSlots(input: GetAvailableSlotsInput): Promise<TimeSlot[]> {
     const repo = new AppointmentRepository();
 
-    const [barber, services, timezone] = await Promise.all([
-      repo.findBarberById(input.barberId),
+    const [professional, services, timezone] = await Promise.all([
+      repo.findProfessionalById(input.professionalId),
       repo.findServicesByIds(input.serviceIds),
       this.getTimezone(),
     ]);
 
-    if (!barber || barber.status !== "ACTIVE") return [];
+    if (!professional || professional.status !== "ACTIVE") return [];
     if (services.length !== input.serviceIds.length) return [];
 
     const totalDuration = services.reduce((sum, s) => sum + s.durationMinutes, 0);
-    const ranges = this.workingRangesFor(barber.workingHours, input.date);
+    const ranges = this.workingRangesFor(professional.workingHours, input.date);
     if (ranges.length === 0) return [];
 
     const dayStart = startOfZonedDay(input.date, timezone);
     const dayEnd = new Date(dayStart);
     dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
 
-    const existing = await repo.findActiveAppointmentsForBarberOnDate(
-      input.barberId,
+    const existing = await repo.findActiveAppointmentsForProfessionalOnDate(
+      input.professionalId,
       dayStart,
       dayEnd,
       input.excludeAppointmentId,
@@ -304,7 +304,7 @@ export class AppointmentService {
       status: appointment.status,
       notes: appointment.notes,
       client: appointment.client,
-      barber: appointment.barber,
+      professional: appointment.professional,
       services: appointment.services.map((s) => ({ id: s.service.id, name: s.service.name })),
       totalPrice: appointment.services.reduce((sum, s) => sum + s.price.toNumber(), 0),
       totalDurationMinutes: appointment.services.reduce((sum, s) => sum + s.durationMinutes, 0),

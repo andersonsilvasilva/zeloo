@@ -13,7 +13,7 @@ import { sendMessageAction } from "@/modules/messages/actions/send-message.actio
 import { listClientAppointmentsAction } from "@/modules/messages/actions/list-client-appointments.action";
 import type { MessageAppointmentOption, MessageFormOptions } from "@/modules/messages/types/message.types";
 
-const APPOINTMENT_PLACEHOLDERS = ["{{barber_agendado}}", "{{resumo_agendamento}}"];
+const APPOINTMENT_PLACEHOLDERS = ["{{professional_agendado}}", "{{resumo_agendamento}}"];
 
 function appointmentSummary(appointment: MessageAppointmentOption): string {
   const when = format(appointment.startTime, "dd/MM/yyyy 'às' HH:mm");
@@ -57,7 +57,7 @@ export function SendMessageDialog({ options }: { options: MessageFormOptions }) 
     let rendered = selectedTemplate.content.replaceAll("{{clientName}}", selectedClient?.name ?? "{{clientName}}");
     if (selectedAppointment) {
       rendered = rendered
-        .replaceAll("{{barber_agendado}}", selectedAppointment.barberName)
+        .replaceAll("{{professional_agendado}}", selectedAppointment.professionalName)
         .replaceAll("{{resumo_agendamento}}", appointmentSummary(selectedAppointment));
     }
     return rendered;
@@ -163,13 +163,13 @@ export function SendMessageDialog({ options }: { options: MessageFormOptions }) 
                 </option>
                 {appointments.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {format(a.startTime, "dd/MM/yyyy HH:mm")} — {a.servicesLabel} — {a.barberName}
+                    {format(a.startTime, "dd/MM/yyyy HH:mm")} — {a.servicesLabel} — {a.professionalName}
                   </option>
                 ))}
               </Select>
               {needsAppointment && (
                 <p className="text-xs text-text-secondary">
-                  Este modelo usa {"{{barber_agendado}}"} e/ou {"{{resumo_agendamento}}"} — selecione um agendamento.
+                  Este modelo usa {"{{professional_agendado}}"} e/ou {"{{resumo_agendamento}}"} — selecione um agendamento.
                 </p>
               )}
             </div>

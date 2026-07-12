@@ -3,7 +3,7 @@ import { z } from "zod";
 /** Schema compartilhado entre frontend (React Hook Form) e backend (Server Action). */
 export const createAppointmentSchema = z.object({
   clientId: z.string().cuid(),
-  barberId: z.string().cuid(),
+  professionalId: z.string().cuid(),
   appointmentDate: z.coerce.date(),
   startTime: z.coerce.date(),
   serviceIds: z.array(z.string().cuid()).min(1, "Selecione ao menos um serviço."),
@@ -48,7 +48,7 @@ export type AppointmentIdInput = z.infer<typeof appointmentIdSchema>;
 export const listAppointmentsSchema = z.object({
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),
-  barberId: z.string().cuid().optional(),
+  professionalId: z.string().cuid().optional(),
   clientId: z.string().cuid().optional(),
   status: appointmentStatusSchema.optional(),
 });
@@ -56,7 +56,7 @@ export const listAppointmentsSchema = z.object({
 export type ListAppointmentsInput = z.infer<typeof listAppointmentsSchema>;
 
 export const getAvailableSlotsSchema = z.object({
-  barberId: z.string().cuid(),
+  professionalId: z.string().cuid(),
   serviceIds: z.array(z.string().cuid()).min(1, "Selecione ao menos um serviço."),
   date: z.coerce.date(),
   /** Ao reagendar, ignora o conflito do próprio agendamento sendo editado. */

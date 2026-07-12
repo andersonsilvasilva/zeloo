@@ -48,7 +48,7 @@ export function ClientForm({ options, mode, clientId, defaultValues, onSuccess }
       email: defaultValues?.email ?? "",
       birthDate: defaultValues?.birthDate ?? null,
       notes: defaultValues?.notes ?? "",
-      preferredBarberId: defaultValues?.preferredBarber?.id ?? null,
+      preferredProfessionalId: defaultValues?.preferredProfessional?.id ?? null,
       status: defaultValues?.status ?? "ACTIVE",
     },
   });
@@ -114,10 +114,10 @@ export function ClientForm({ options, mode, clientId, defaultValues, onSuccess }
         </div>
 
         <div className="space-y-1">
-          <Label htmlFor="preferredBarberId">Barbeiro preferido</Label>
-          <Select id="preferredBarberId" {...register("preferredBarberId")}>
+          <Label htmlFor="preferredProfessionalId">Profissional preferido</Label>
+          <Select id="preferredProfessionalId" {...register("preferredProfessionalId")}>
             <option value="">Nenhum</option>
-            {options.barbers.map((b) => (
+            {options.professionals.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.professionalName}
               </option>
