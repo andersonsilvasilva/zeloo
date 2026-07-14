@@ -1,8 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { prisma, type PrismaOrTx } from "@/lib/prisma";
 import type { CashbookEntryType } from "@/modules/finance/schemas/finance.schema";
-
-type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const registerInclude = {
   openedBy: { select: { id: true, name: true } },
@@ -17,12 +15,25 @@ const cashbookInclude = {
 export type CashbookEntryWithRelations = Prisma.CashbookEntryGetPayload<{ include: typeof cashbookInclude }>;
 
 const payableAppointmentInclude = {
-  client: { select: { name: true } },
+  client: { select: { name: true, email: true } },
   professional: { select: { professionalName: true } },
   services: { include: { service: { select: { name: true } } } },
 } satisfies Prisma.AppointmentInclude;
 
 export type PayableAppointment = Prisma.AppointmentGetPayload<{ include: typeof payableAppointmentInclude }>;
+
+const paymentReceiptInclude = {
+  receivedBy: { select: { id: true, name: true } },
+  appointment: {
+    include: {
+      client: { select: { name: true, phone: true, whatsapp: true } },
+      professional: { select: { professionalName: true } },
+      services: { include: { service: { select: { name: true } } } },
+    },
+  },
+} satisfies Prisma.PaymentInclude;
+
+export type PaymentWithReceiptRelations = Prisma.PaymentGetPayload<{ include: typeof paymentReceiptInclude }>;
 
 export class FinanceRepository {
   constructor(private readonly db: PrismaOrTx = prisma) {}
@@ -101,5 +112,29 @@ export class FinanceRepository {
 
   async createPayment(data: Prisma.PaymentCreateInput) {
     return this.db.payment.create({ data });
+  }
+
+  async findPendingPixChargeByAppointmentId(appointmentId: string) {
+    return this.db.pixCharge.findFirst({ where: { appointmentId, status: "PENDING" } });
+  }
+
+  async createPixCharge(data: Prisma.PixChargeCreateInput) {
+    return this.db.pixCharge.create({ data });
+  }
+
+  async findPixChargeById(id: string) {
+    return this.db.pixCharge.findUnique({ where: { id } });
+  }
+
+  async findPixChargeByMercadoPagoPaymentId(mercadoPagoPaymentId: string) {
+    return this.db.pixCharge.findUnique({ where: { mercadoPagoPaymentId } });
+  }
+
+  async updatePixCharge(id: string, data: Prisma.PixChargeUpdateInput) {
+    return this.db.pixCharge.update({ where: { id }, data });
+  }
+
+  async findPaymentById(id: string): Promise<PaymentWithReceiptRelations | null> {
+    return this.db.payment.findUnique({ where: { id }, include: paymentReceiptInclude });
   }
 }

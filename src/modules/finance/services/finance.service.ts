@@ -1,5 +1,8 @@
 import { endOfDay, startOfDay } from "date-fns";
+import type { PixCharge } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { SettingsService } from "@/modules/settings/services/settings.service";
+import { createPixPayment, getPaymentStatus, MercadoPagoNotConfiguredError } from "@/lib/mercadopago/mercadopago-client";
 import {
   FinanceRepository,
   type CashRegisterWithRelations,
@@ -11,6 +14,7 @@ import type {
   CloseCashRegisterInput,
   CreateCashbookEntryInput,
   RegisterPaymentInput,
+  CreatePixChargeInput,
   ListCashbookEntriesInput,
   BalanceteFiltersInput,
 } from "@/modules/finance/schemas/finance.schema";
@@ -21,7 +25,11 @@ import type {
   PayableAppointmentOption,
   BalanceteRow,
   BalanceteSummary,
+  PixChargeInfo,
+  PaymentReceipt,
 } from "@/modules/finance/types/finance.types";
+
+export { MercadoPagoNotConfiguredError };
 
 export class CashRegisterAlreadyOpenError extends Error {
   constructor() {
@@ -48,6 +56,20 @@ export class AppointmentNotPayableError extends Error {
   constructor() {
     super("Este agendamento não está concluído ou já possui pagamento registrado.");
     this.name = "AppointmentNotPayableError";
+  }
+}
+
+export class PaymentNotFoundError extends Error {
+  constructor() {
+    super("Pagamento não encontrado.");
+    this.name = "PaymentNotFoundError";
+  }
+}
+
+export class PixChargeNotFoundError extends Error {
+  constructor() {
+    super("Cobrança Pix não encontrada.");
+    this.name = "PixChargeNotFoundError";
   }
 }
 
@@ -168,13 +190,150 @@ export class FinanceService {
           createdBy: { connect: { id: userId } },
         });
 
-        return this.toCashbookItem(entry);
+        return { entry: this.toCashbookItem(entry), paymentId: payment.id };
       },
       // 5 consultas sequenciais numa transação: o limite padrão de 5s do Prisma
       // é apertado demais sob rede mais lenta até o banco (ex.: hospedagem
       // compartilhada) — visto travar com "Transaction already closed" em teste.
       { timeout: 15000 },
     );
+  }
+
+  /**
+   * Gera uma cobrança Pix via Mercado Pago pra um agendamento pagável. Não
+   * cria Payment/CashbookEntry ainda — isso só acontece quando o webhook
+   * confirma o pagamento (ver `confirmPixCharge`). Se já existir uma cobrança
+   * PENDING pro mesmo agendamento, devolve ela em vez de gerar uma nova (evita
+   * QR codes duplicados se o usuário reabrir o diálogo).
+   */
+  async createPixCharge(input: CreatePixChargeInput, userId: string): Promise<PixChargeInfo> {
+    const repo = new FinanceRepository();
+
+    const register = await repo.findOpenRegister();
+    if (!register) throw new NoOpenCashRegisterError();
+
+    const appointment = await repo.findAppointmentById(input.appointmentId);
+    if (!appointment) throw new AppointmentNotFoundError();
+
+    const existingPayments = await repo.countPaymentsForAppointment(input.appointmentId);
+    if (appointment.status !== "COMPLETED" || existingPayments > 0) {
+      throw new AppointmentNotPayableError();
+    }
+
+    const pending = await repo.findPendingPixChargeByAppointmentId(input.appointmentId);
+    if (pending) return this.toPixChargeInfo(pending);
+
+    const settingsService = new SettingsService();
+    const { accessToken } = await settingsService.getMercadoPagoCredentials();
+    if (!accessToken) throw new MercadoPagoNotConfiguredError();
+
+    const result = await createPixPayment({
+      accessToken,
+      amount: input.amount,
+      description: `Pagamento — ${appointment.client.name}`,
+      appointmentId: input.appointmentId,
+      payerEmail: appointment.client.email || "cliente@sememail.com",
+    });
+
+    const charge = await repo.createPixCharge({
+      appointment: { connect: { id: input.appointmentId } },
+      mercadoPagoPaymentId: result.mercadoPagoPaymentId,
+      qrCode: result.qrCode,
+      qrCodeBase64: result.qrCodeBase64,
+      amount: input.amount,
+      status: "PENDING",
+      createdBy: { connect: { id: userId } },
+    });
+
+    return this.toPixChargeInfo(charge);
+  }
+
+  /** Leitura pra polling da tela — reflete o que o webhook já confirmou, não consulta o Mercado Pago ao vivo. */
+  async getPixChargeStatus(id: string): Promise<PixChargeInfo> {
+    const repo = new FinanceRepository();
+    const charge = await repo.findPixChargeById(id);
+    if (!charge) throw new PixChargeNotFoundError();
+    return this.toPixChargeInfo(charge);
+  }
+
+  /**
+   * Chamado pelo webhook do Mercado Pago (sem sessão de usuário — userId fica
+   * null no log de auditoria). Nunca confia no corpo do webhook por si só:
+   * sempre reconsulta o status direto na API do Mercado Pago antes de dar
+   * baixa, e reconfirma dentro da transação que a cobrança ainda não foi
+   * processada — cobre reenvios do mesmo webhook (Mercado Pago reenvia em
+   * qualquer resposta não-2xx, e pode reenviar mesmo com 2xx por segurança).
+   */
+  async confirmPixCharge(mercadoPagoPaymentId: string): Promise<void> {
+    const repo = new FinanceRepository();
+    const charge = await repo.findPixChargeByMercadoPagoPaymentId(mercadoPagoPaymentId);
+    if (!charge) return;
+    if (charge.status === "APPROVED" && charge.paymentId) return;
+
+    const settingsService = new SettingsService();
+    const { accessToken } = await settingsService.getMercadoPagoCredentials();
+    if (!accessToken) return;
+
+    const status = await getPaymentStatus(accessToken, mercadoPagoPaymentId);
+
+    if (status === "approved") {
+      await prisma.$transaction(
+        async (tx) => {
+          const txRepo = new FinanceRepository(tx);
+          const current = await txRepo.findPixChargeById(charge.id);
+          if (!current || (current.status === "APPROVED" && current.paymentId)) return;
+
+          const payment = await txRepo.createPayment({
+            appointment: { connect: { id: charge.appointmentId } },
+            amount: charge.amount,
+            paymentMethod: "PIX",
+            status: "PAID",
+            paidAt: new Date(),
+          });
+
+          await txRepo.createCashbookEntry({
+            type: "CREDIT",
+            description: `Pagamento Pix — cobrança ${charge.id}`,
+            amount: charge.amount,
+            paymentMethod: "PIX",
+            appointmentId: charge.appointmentId,
+            payment: { connect: { id: payment.id } },
+            transactionDate: new Date(),
+          });
+
+          await txRepo.updatePixCharge(charge.id, {
+            status: "APPROVED",
+            payment: { connect: { id: payment.id } },
+          });
+        },
+        { timeout: 15000 },
+      );
+    } else if (status === "rejected") {
+      await repo.updatePixCharge(charge.id, { status: "REJECTED" });
+    } else if (status === "cancelled") {
+      await repo.updatePixCharge(charge.id, { status: "CANCELLED" });
+    }
+    // "pending"/"in_process" -> continua PENDING, sem alteração.
+  }
+
+  async getPaymentReceipt(paymentId: string): Promise<PaymentReceipt> {
+    const repo = new FinanceRepository();
+    const payment = await repo.findPaymentById(paymentId);
+    if (!payment) throw new PaymentNotFoundError();
+
+    return {
+      id: payment.id,
+      amount: payment.amount.toNumber(),
+      paymentMethod: payment.paymentMethod,
+      paidAt: payment.paidAt,
+      receivedByName: payment.receivedBy?.name ?? null,
+      clientName: payment.appointment.client.name,
+      clientPhone: payment.appointment.client.whatsapp || payment.appointment.client.phone,
+      professionalName: payment.appointment.professional.professionalName,
+      servicesLabel: payment.appointment.services.map((s) => s.service.name).join(", "),
+      appointmentDate: payment.appointment.appointmentDate,
+      startTime: payment.appointment.startTime,
+    };
   }
 
   /** Balancete débito/crédito: agrupa lançamentos por categoria no período, com totais gerais. */
@@ -239,6 +398,19 @@ export class FinanceService {
       totalPrice: appointment.services.reduce((sum, s) => sum + s.price.toNumber(), 0),
       appointmentDate: appointment.appointmentDate,
       startTime: appointment.startTime,
+    };
+  }
+
+  private toPixChargeInfo(charge: PixCharge): PixChargeInfo {
+    return {
+      id: charge.id,
+      appointmentId: charge.appointmentId,
+      status: charge.status,
+      qrCode: charge.qrCode,
+      qrCodeBase64: charge.qrCodeBase64,
+      amount: charge.amount.toNumber(),
+      expiresAt: charge.expiresAt,
+      paymentId: charge.paymentId,
     };
   }
 }

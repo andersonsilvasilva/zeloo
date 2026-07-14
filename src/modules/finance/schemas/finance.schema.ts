@@ -41,6 +41,13 @@ export const registerPaymentSchema = z.object({
 
 export type RegisterPaymentInput = z.infer<typeof registerPaymentSchema>;
 
+export const createPixChargeSchema = z.object({
+  appointmentId: z.string().cuid(),
+  amount: z.coerce.number().positive("O valor deve ser maior que zero."),
+});
+
+export type CreatePixChargeInput = z.infer<typeof createPixChargeSchema>;
+
 export const listCashbookEntriesSchema = z.object({
   dateFrom: z.coerce.date().optional(),
   dateTo: z.coerce.date().optional(),

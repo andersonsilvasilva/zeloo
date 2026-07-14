@@ -19,14 +19,14 @@ export async function registerPaymentAction(rawInput: RegisterPaymentInput) {
 
   try {
     const service = new FinanceService();
-    const entry = await service.registerPayment(input, userId);
+    const { entry, paymentId } = await service.registerPayment(input, userId);
     // Pagamento fecha o pedido e muda o faturamento — invalida o cache de
     // navegação do dashboard e dos relatórios, senão ficam com dados velhos
     // até o Router Cache expirar sozinho (ver nota em update-appointment-status.action.ts).
     revalidatePath("/");
     revalidatePath("/relatorios");
     revalidatePath("/agenda");
-    return { success: true as const, entry };
+    return { success: true as const, entry, paymentId };
   } catch (error) {
     if (
       error instanceof NoOpenCashRegisterError ||
