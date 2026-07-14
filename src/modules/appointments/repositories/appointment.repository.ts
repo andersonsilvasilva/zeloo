@@ -1,9 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { prisma, type PrismaOrTx } from "@/lib/prisma";
 import type { AppointmentStatus } from "@/modules/appointments/schemas/appointment.schema";
-
-/** Cliente Prisma ou uma transação ($transaction callback) — permite reuso dentro de tx. */
-type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const appointmentInclude = {
   client: { select: { id: true, name: true } },

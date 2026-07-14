@@ -51,6 +51,10 @@ export const PERMISSIONS = {
     view: "users.view",
     create: "users.create",
     update: "users.update",
+    delete: "users.delete",
+  },
+  audit: {
+    view: "audit.view",
   },
 } as const;
 

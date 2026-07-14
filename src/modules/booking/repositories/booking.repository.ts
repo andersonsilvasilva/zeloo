@@ -1,8 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { prisma, type PrismaOrTx } from "@/lib/prisma";
 import { ROLES } from "@/lib/auth/permissions";
-
-type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const clientSelect = {
   id: true,

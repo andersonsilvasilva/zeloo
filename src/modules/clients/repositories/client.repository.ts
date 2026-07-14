@@ -1,8 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { prisma, type PrismaOrTx } from "@/lib/prisma";
 import type { ClientStatus } from "@/modules/clients/schemas/client.schema";
-
-type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const clientInclude = {
   preferredProfessional: { select: { id: true, professionalName: true } },

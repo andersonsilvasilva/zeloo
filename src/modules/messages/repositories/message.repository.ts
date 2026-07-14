@@ -1,8 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { prisma, type PrismaOrTx } from "@/lib/prisma";
 import type { MessageChannel, TemplateStatus } from "@/modules/messages/schemas/message.schema";
-
-type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const logInclude = {
   client: { select: { id: true, name: true } },

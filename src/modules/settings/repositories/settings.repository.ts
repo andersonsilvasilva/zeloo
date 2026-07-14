@@ -1,7 +1,5 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
-
-type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
+import type { Prisma } from "@prisma/client";
+import { prisma, type PrismaOrTx } from "@/lib/prisma";
 
 export class SettingsRepository {
   constructor(private readonly db: PrismaOrTx = prisma) {}

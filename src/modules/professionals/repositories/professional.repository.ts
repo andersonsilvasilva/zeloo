@@ -1,8 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { prisma, type PrismaOrTx } from "@/lib/prisma";
 import type { ProfessionalStatus } from "@/modules/professionals/schemas/professional.schema";
-
-type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const professionalInclude = {
   profileImage: { select: { storagePath: true } },
