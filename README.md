@@ -1,6 +1,6 @@
 <div align="center">
 
-# 💈 Barbershop SaaS
+# 💈 Zeloo
 
 ### Sistema completo de gestão para barbearias — agendamento, financeiro, clientes e muito mais
 
@@ -19,8 +19,8 @@ Aplicação web full-stack para gestão operacional, financeira e comercial de u
 [![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat-square&logo=playwright&logoColor=white)](https://playwright.dev/)
 [![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat-square&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
-[![Deploy](https://img.shields.io/badge/deploy-Hostinger_(Node.js)-673DE6?style=flat-square&logo=hostinger&logoColor=white)](#-deploy-em-produção)
-[![Status](https://img.shields.io/badge/status-em_produção-success?style=flat-square)](https://barbearia-io.com.br)
+[![Deploy](https://img.shields.io/badge/deploy-VPS_(PM2_%2B_Nginx)-673DE6?style=flat-square&logo=linux&logoColor=white)](#-deploy-em-produção)
+[![Status](https://img.shields.io/badge/status-em_produção-success?style=flat-square)](https://zeloo.net)
 [![License](https://img.shields.io/badge/license-privado-red?style=flat-square)](#-licença)
 
 </div>
@@ -50,7 +50,7 @@ Aplicação web full-stack para gestão operacional, financeira e comercial de u
 
 ## 🎯 Visão geral
 
-O **Barbershop SaaS** cobre o ciclo completo de uma barbearia: da divulgação e captação de clientes (vitrine pública com auto-agendamento) até a gestão interna do dia a dia (agenda, caixa, relatórios, equipe e permissões).
+O **Zeloo** cobre o ciclo completo de uma barbearia: da divulgação e captação de clientes (vitrine pública com auto-agendamento) até a gestão interna do dia a dia (agenda, caixa, relatórios, equipe e permissões).
 
 O projeto tem **duas frentes**:
 
@@ -74,11 +74,11 @@ O projeto tem **duas frentes**:
 - **Dashboard** com indicadores do dia/semana/mês/ano, gráficos de faturamento e distribuição de serviços, relógio digital ao vivo com a agenda do dia e box de aniversariantes (hoje/semana/mês)
 - **Agenda**: CRUD completo de agendamentos com checagem automática de conflito de horário, fluxo de status (`Pendente → Confirmado → Em atendimento → Concluído`, com `Cancelado`/`Não compareceu`), reagendamento, atalho para registrar pagamento direto na lista e exclusão definitiva restrita ao Administrador (bloqueada se já houver pagamento registrado)
 - **Clientes**, **Profissionais** e **Serviços**: CRUD completo com upload de fotos (thumbnail/média/grande gerados automaticamente)
-- **Financeiro**: abertura/fechamento de caixa, livro-caixa (entradas/saídas), registro de pagamentos e **Balancete débito/crédito** por categoria, com impressão/exportação em PDF
+- **Financeiro**: abertura/fechamento de caixa, livro-caixa (entradas/saídas), registro de pagamentos (dinheiro, cartão ou **Pix via Mercado Pago** — QR code, copia-e-cola, confirmação automática por webhook e recibo imprimível) e **Balancete débito/crédito** por categoria, com impressão/exportação em PDF
 - **Relatórios**: indicadores por período customizável (diferente dos buckets fixos do dashboard), com impressão/exportação em PDF — profissionais veem automaticamente só os próprios números
 - **Mensagens**: modelos de mensagem com variáveis dinâmicas (`{{clientName}}`, `{{professional_agendado}}`, `{{resumo_agendamento}}`), envio manual ou automático ao criar/concluir agendamento, e **envio real via WhatsApp Cloud API**
-- **Usuários e permissões**: gestão de contas da equipe e papéis (RBAC configurável pela própria interface)
-- **Configurações**: logomarca, nome, fuso horário e dados da barbearia
+- **Usuários e permissões**: gestão de contas da equipe e papéis (RBAC configurável pela própria interface), com exclusão de conta de login que preserva histórico e cadastro vinculado
+- **Configurações**: logomarca, favicon, imagem de compartilhamento, nome, bio, redes sociais, fuso horário e dados da barbearia, credenciais do Mercado Pago e **log de auditoria** de alterações no sistema
 
 ---
 
@@ -100,7 +100,8 @@ O projeto tem **duas frentes**:
 | Ícones | Lucide React |
 | Datas | date-fns / date-fns-tz |
 | Testes | Vitest (unitário) + Playwright (e2e) |
-| Deploy | Node.js standalone via Passenger (Hostinger) |
+| Deploy | Node.js standalone via PM2 + Nginx (VPS) |
+| Pagamentos | Mercado Pago (Pix) |
 
 ---
 
@@ -235,28 +236,27 @@ Prioridades sugeridas: login e permissões, CRUD de cliente/profissional/serviç
 
 ## 📦 Deploy em produção
 
-Aplicação em produção em **https://barbearia-io.com.br**, rodando como **Node.js standalone** via **Phusion Passenger** (hospedagem compartilhada Hostinger, sem seletor de Node.js no painel — runtime acessado diretamente via `/opt/alt/alt-nodejs20`). Migrado da hospedagem original em 2026-07-11 (mesma arquitetura, conta/servidor diferentes).
+Aplicação em produção em **https://zeloo.net**, rodando como **Node.js standalone** numa VPS própria (Ubuntu 22.04), gerenciada pelo **PM2** e exposta atrás de **Nginx** como reverse proxy (porta 80/443 → `127.0.0.1:3000`), com SSL via Certbot/Let's Encrypt. MySQL 8 roda localmente na mesma VPS. Migrado da hospedagem compartilhada (Hostinger/Passenger) em 2026-07-13/14.
 
-O deploy é **manual** (build local + upload), não automatizado via Git:
+O deploy é **manual** (build local + upload), não automatizado via Git — o diretório da aplicação na VPS **não é um clone git**:
 
 ```bash
 npm run build   # gera .next/standalone (output: "standalone" no next.config.js)
-# copia .next/static e public/ para dentro de .next/standalone
-# empacota (.tar.gz) e envia por scp/FTP para o servidor
-# extrai em app_deploy/, restaura .env e public/uploads do servidor
-# chmod +x nos binários do Prisma, toca app_deploy/tmp/restart.txt
+# copia .next/static para dentro de .next/standalone/.next/static
+# empacota (.tar.gz) SEM incluir public/uploads e SEM incluir .env
+# envia por scp e extrai por cima do diretório da app na VPS (tar nunca deleta o que não está no pacote)
+# aplica migrations pendentes (npx prisma migrate deploy) usando o .env já existente no servidor
+# pm2 restart barbearia --update-env
 ```
 
 Pontos específicos desse ambiente (documentados para reprodutibilidade):
 
-- `.htaccess` com as diretivas do Passenger é **versionado no repositório** como referência do valor correto (caminho `PassengerAppRoot`, versão do Node) — mas precisa ser recriado manualmente em `public_html/` na hospedagem, já que não há auto-deploy via Git ativo.
-- **Nunca sobrescrever `public/uploads/` do servidor com a pasta local** — é gitignored e só tem arquivos de teste localmente; todo deploy precisa fazer backup do `app_deploy/public/uploads` do servidor antes de extrair o novo pacote, e restaurar depois (mesmo padrão já usado para o `.env`).
-- Páginas públicas estáticas (`/login`, `/agendar`, `/agendar/escolher`) recebem `Cache-Control: no-store` via `headers()` em `next.config.js` — sem isso, o CDN da Hostinger cacheia o HTML por 1 ano e visitantes recebem chunks JS/CSS já apagados após um redeploy. **Não usar `force-dynamic`** como alternativa: essa hospedagem trava com `EAGAIN` do Prisma sob esse padrão de carga.
-- `middleware.ts` não faz nenhum redirect (`NextResponse.redirect()` em middleware, nesse ambiente Passenger, trava a requisição — bug do Next.js em `output: standalone`). O controle de acesso por autenticação é feito via `redirect()` do `next/navigation` em `app/(app)/layout.tsx`.
-- `sharp` precisa do binário `linux-x64` explícito ao buildar no Windows (`npm install --no-save --force @img/sharp-linux-x64@<versão> @img/sharp-libvips-linux-x64@<versão>` antes do build) — só o binário `win32-x64` fica no `node_modules` local por padrão, e o app quebra em qualquer rota que use upload de imagem.
-- `engineType = "binary"` no `generator client` do Prisma — o engine `library` (addon nativo embutido) trava com `PANIC: timer has gone away` no sandbox da hospedagem; o engine binário (processo separado) contorna a restrição.
-- O build (`next build`) não roda de forma confiável direto no servidor compartilhado (o compilador SWC/Rust esbarra em restrições de processos do sandbox) — o build é feito localmente e o pacote (`.next/standalone` + `.next/static` + `public/`) é enviado pronto.
-- Erro 503 com `Assertion failed: uv_thread_create` no log é esgotamento de threads da conta (limite de recursos do plano) — não tem solução via código, precisa aumentar recursos da hospedagem.
+- **`next build` com `output: "standalone"` copia o `.env` do projeto automaticamente para dentro de `.next/standalone/`.** Se o pacote de deploy for montado copiando esse diretório inteiro, o `.env` de desenvolvimento local vai junto e **sobrescreve o `.env` real de produção** na extração — já causou um incidente de indisponibilidade em produção. Sempre remover qualquer `.env*` do pacote antes de compactar, e nunca assumir que "só copiei o build" é seguro.
+- **Nunca sobrescrever `public/uploads/` do servidor** — é gitignored. O `tar` só adiciona/sobrescreve arquivos presentes no arquivo compactado e nunca deleta o que não está lá, então basta **não incluir `public/uploads` no pacote** para os uploads reais sobreviverem a qualquer redeploy.
+- O Next.js standalone faz a varredura de `public/` **uma única vez, no boot do processo** — qualquer arquivo criado depois (todo upload feito pela aplicação em produção) fica invisível pro roteador interno até o próximo restart completo. Correção: Nginx serve `/uploads/` direto do disco via `location /uploads/ { alias .../public/uploads/; }`, antes do `proxy_pass` pro Node — contorna essa limitação por completo.
+- `sharp` precisa dos binários **exatos** de `@img/sharp-linux-x64` e `@img/sharp-libvips-linux-x64` que o `sharp/package.json` pede em `optionalDependencies` — instalar uma versão "aproximada" manualmente (comum ao buildar no Windows e rodar em Linux) quebra upload de imagem com erro genérico "A string was expected".
+- `AUTH_URL` precisa usar o protocolo real servido ao navegador (`https://` depois que o SSL estiver ativo) — com HTTPS configurado, Auth.js marca o cookie de sessão como `Secure`, que o navegador recusa silenciosamente numa conexão HTTP simples (sem erro visível em lugar nenhum). `AUTH_TRUST_HOST=true` é necessário atrás do proxy reverso.
+- Ao trocar variáveis em `.env` na VPS, sempre `pm2 restart <app> --update-env` — `pm2 restart` sozinho não recarrega o arquivo.
 
 ---
 

@@ -35,7 +35,7 @@ export default async function LoginPage() {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-semibold text-text">{settings.name || "Barbershop SaaS"}</h1>
+            <h1 className="text-2xl font-semibold text-text">{settings.name || "Zeloo"}</h1>
             <p className="text-sm text-text-secondary">Entre com sua conta</p>
           </div>
         </div>

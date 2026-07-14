@@ -7,7 +7,7 @@ const siteUrl = process.env.AUTH_URL ?? "http://localhost:3000";
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getGeneralSettingsAction();
-  const title = settings.name || "Zelo";
+  const title = settings.name || "Zeloo";
   const description = settings.socialBio || DEFAULT_SOCIAL_BIO;
 
   return {
