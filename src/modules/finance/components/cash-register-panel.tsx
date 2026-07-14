@@ -107,7 +107,8 @@ export function CashRegisterPanel({ initialRegister, canCreate, canUpdate }: Cas
         <div>
           <h2 className="text-sm font-medium text-text">Caixa aberto</h2>
           <p className="text-sm text-text-secondary">
-            Desde {format(initialRegister.openedAt, "dd/MM/yyyy HH:mm")} por {initialRegister.openedBy.name} ·
+            Desde {format(initialRegister.openedAt, "dd/MM/yyyy HH:mm")} por{" "}
+            {initialRegister.openedBy?.name ?? "Usuário removido"} ·
             Abertura: {formatCurrency(initialRegister.openingBalance)}
           </p>
         </div>
