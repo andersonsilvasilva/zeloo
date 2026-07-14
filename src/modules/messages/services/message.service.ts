@@ -1,5 +1,5 @@
-import { format } from "date-fns";
 import { formatCurrency } from "@/lib/utils/format";
+import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { sendWhatsAppTemplateMessage } from "@/lib/whatsapp/whatsapp-client";
 import { SettingsService } from "@/modules/settings/services/settings.service";
 import {
@@ -144,7 +144,8 @@ export class MessageService {
       throw new AppointmentRequiredError();
     }
 
-    const content = this.renderTemplate(template.content, client.name, appointment);
+    const settings = appointment ? await new SettingsService().getGeneralSettings() : null;
+    const content = this.renderTemplate(template.content, client.name, appointment, settings?.timezone);
 
     let providerRef: string | undefined;
     if (template.channel === "WHATSAPP") {
@@ -154,12 +155,11 @@ export class MessageService {
       // Variáveis {{1}}..{{5}} do template "confirmacao_agendamento" — só
       // fazem sentido quando há um agendamento vinculado ao envio.
       let parameters: string[] | undefined;
-      if (appointment) {
-        const settings = await new SettingsService().getGeneralSettings();
+      if (appointment && settings) {
         parameters = [
           client.name,
           settings.name,
-          format(appointment.startTime, "dd/MM/yyyy 'às' HH:mm"),
+          formatInBarbershopTz(appointment.startTime, settings.timezone, "dd/MM/yyyy 'às' HH:mm"),
           appointment.professional.professionalName,
           appointment.services.map((s) => s.service.name).join(", "),
         ];
@@ -250,19 +250,24 @@ export class MessageService {
     };
   }
 
-  private buildAppointmentSummary(appointment: AppointmentWithRelations): string {
+  private buildAppointmentSummary(appointment: AppointmentWithRelations, timezone: string): string {
     const services = appointment.services.map((s) => s.service.name).join(", ");
     const total = appointment.services.reduce((sum, s) => sum + s.price.toNumber(), 0);
-    const when = format(appointment.startTime, "dd/MM/yyyy 'às' HH:mm");
+    const when = formatInBarbershopTz(appointment.startTime, timezone, "dd/MM/yyyy 'às' HH:mm");
     return `${services} — ${when} — ${formatCurrency(total)}`;
   }
 
-  private renderTemplate(content: string, clientName: string, appointment: AppointmentWithRelations | null): string {
+  private renderTemplate(
+    content: string,
+    clientName: string,
+    appointment: AppointmentWithRelations | null,
+    timezone?: string,
+  ): string {
     let rendered = content.replaceAll("{{clientName}}", clientName);
-    if (appointment) {
+    if (appointment && timezone) {
       rendered = rendered
         .replaceAll("{{professional_agendado}}", appointment.professional.professionalName)
-        .replaceAll("{{resumo_agendamento}}", this.buildAppointmentSummary(appointment));
+        .replaceAll("{{resumo_agendamento}}", this.buildAppointmentSummary(appointment, timezone));
     }
     return rendered;
   }

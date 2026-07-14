@@ -3,24 +3,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send } from "lucide-react";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/utils/format";
+import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { sendMessageAction } from "@/modules/messages/actions/send-message.action";
 import { listClientAppointmentsAction } from "@/modules/messages/actions/list-client-appointments.action";
 import type { MessageAppointmentOption, MessageFormOptions } from "@/modules/messages/types/message.types";
 
 const APPOINTMENT_PLACEHOLDERS = ["{{professional_agendado}}", "{{resumo_agendamento}}"];
 
-function appointmentSummary(appointment: MessageAppointmentOption): string {
-  const when = format(appointment.startTime, "dd/MM/yyyy 'às' HH:mm");
+function appointmentSummary(appointment: MessageAppointmentOption, timezone: string): string {
+  const when = formatInBarbershopTz(appointment.startTime, timezone, "dd/MM/yyyy 'às' HH:mm");
   return `${appointment.servicesLabel} — ${when} — ${formatCurrency(appointment.totalPrice)}`;
 }
 
-export function SendMessageDialog({ options }: { options: MessageFormOptions }) {
+export function SendMessageDialog({ options, timezone }: { options: MessageFormOptions; timezone: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [clientId, setClientId] = useState("");
@@ -58,10 +58,10 @@ export function SendMessageDialog({ options }: { options: MessageFormOptions }) 
     if (selectedAppointment) {
       rendered = rendered
         .replaceAll("{{professional_agendado}}", selectedAppointment.professionalName)
-        .replaceAll("{{resumo_agendamento}}", appointmentSummary(selectedAppointment));
+        .replaceAll("{{resumo_agendamento}}", appointmentSummary(selectedAppointment, timezone));
     }
     return rendered;
-  }, [selectedTemplate, selectedClient, selectedAppointment]);
+  }, [selectedTemplate, selectedClient, selectedAppointment, timezone]);
 
   function reset() {
     setClientId("");
@@ -163,7 +163,7 @@ export function SendMessageDialog({ options }: { options: MessageFormOptions }) 
                 </option>
                 {appointments.map((a) => (
                   <option key={a.id} value={a.id}>
-                    {format(a.startTime, "dd/MM/yyyy HH:mm")} — {a.servicesLabel} — {a.professionalName}
+                    {formatInBarbershopTz(a.startTime, timezone, "dd/MM/yyyy HH:mm")} — {a.servicesLabel} — {a.professionalName}
                   </option>
                 ))}
               </Select>

@@ -4,6 +4,7 @@ import { ComingSoon } from "@/components/shared/coming-soon";
 import { listTemplatesAction } from "@/modules/messages/actions/list-templates.action";
 import { listMessageLogsAction } from "@/modules/messages/actions/list-message-logs.action";
 import { getMessageFormOptionsAction } from "@/modules/messages/actions/get-message-form-options.action";
+import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 import { TemplateList } from "@/modules/messages/components/template-list";
 import { NewTemplateButton } from "@/modules/messages/components/new-template-button";
 import { SendMessageDialog } from "@/modules/messages/components/send-message-dialog";
@@ -13,10 +14,11 @@ export default async function MensagensPage() {
   const canSend = await hasPermission(PERMISSIONS.messages.send);
   if (!canSend) return <ComingSoon title="Mensagens" />;
 
-  const [templates, logs, options] = await Promise.all([
+  const [templates, logs, options, settings] = await Promise.all([
     listTemplatesAction({}),
     listMessageLogsAction({}),
     getMessageFormOptionsAction(),
+    getGeneralSettingsAction(),
   ]);
 
   return (
@@ -26,7 +28,7 @@ export default async function MensagensPage() {
           <h1 className="text-2xl font-semibold text-text">Mensagens</h1>
           <p className="text-sm text-text-secondary">Modelos de WhatsApp/SMS, envio e histórico.</p>
         </div>
-        <SendMessageDialog options={options} />
+        <SendMessageDialog options={options} timezone={settings.timezone} />
       </div>
 
       <section className="space-y-3">
@@ -39,7 +41,7 @@ export default async function MensagensPage() {
 
       <section className="space-y-3">
         <h2 className="text-sm font-medium uppercase tracking-wide text-text-secondary">Histórico</h2>
-        <MessageLogList logs={logs} />
+        <MessageLogList logs={logs} timezone={settings.timezone} />
       </section>
     </div>
   );
