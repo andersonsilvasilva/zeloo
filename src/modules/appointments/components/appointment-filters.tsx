@@ -16,13 +16,12 @@ const STATUS_LABELS: Record<(typeof appointmentStatusValues)[number], string> = 
 };
 
 export interface AppointmentFiltersProps {
-  date: string;
   professionalId: string;
   status: string;
   professionals: ProfessionalOption[];
 }
 
-export function AppointmentFilters({ date, professionalId, status, professionals }: AppointmentFiltersProps) {
+export function AppointmentFilters({ professionalId, status, professionals }: AppointmentFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -39,17 +38,6 @@ export function AppointmentFilters({ date, professionalId, status, professionals
 
   return (
     <div className="flex flex-wrap items-end gap-3">
-      <div className="space-y-1">
-        <Label htmlFor="filter-date">Data</Label>
-        <input
-          id="filter-date"
-          type="date"
-          value={date}
-          onChange={(e) => updateParam("date", e.target.value)}
-          className="h-10 rounded-lg border border-border bg-card px-3 text-sm text-text focus-gold"
-        />
-      </div>
-
       <div className="w-48 space-y-1">
         <Label htmlFor="filter-professional">Profissional</Label>
         <Select id="filter-professional" value={professionalId} onChange={(e) => updateParam("professionalId", e.target.value)}>

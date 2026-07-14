@@ -1,20 +1,23 @@
 import { hasPermission } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { ComingSoon } from "@/components/shared/coming-soon";
+import { PrintButton } from "@/components/shared/print-button";
+import { PrintHeader } from "@/components/shared/print-header";
 import { listAppointmentsAction } from "@/modules/appointments/actions/list-appointments.action";
 import { getAppointmentFormOptionsAction } from "@/modules/appointments/actions/get-appointment-form-options.action";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 import { AppointmentFilters } from "@/modules/appointments/components/appointment-filters";
 import { AppointmentList } from "@/modules/appointments/components/appointment-list";
 import { NewAppointmentButton } from "@/modules/appointments/components/new-appointment-button";
-import { formatDateOnly, parseDateOnly } from "@/modules/appointments/utils/date-only";
+import { DateRangeFilters } from "@/components/shared/date-range-filters";
+import { formatDateOnly, formatDateOnlyBR, parseDateOnly } from "@/modules/appointments/utils/date-only";
 import { todayInTimezone } from "@/lib/utils/timezone";
 import type { AppointmentStatus } from "@/modules/appointments/types/appointment.types";
 
 export default async function AgendaPage({
   searchParams,
 }: {
-  searchParams: { date?: string; professionalId?: string; status?: string };
+  searchParams: { dateFrom?: string; dateTo?: string; professionalId?: string; status?: string };
 }) {
   const canView = await hasPermission(PERMISSIONS.appointments.view);
   if (!canView) return <ComingSoon title="Agenda" />;
@@ -29,32 +32,45 @@ export default async function AgendaPage({
   ]);
 
   const settings = await getGeneralSettingsAction();
-  const date = searchParams.date || formatDateOnly(todayInTimezone(settings.timezone));
+  const today = formatDateOnly(todayInTimezone(settings.timezone));
+  const dateFrom = searchParams.dateFrom || today;
+  const dateTo = searchParams.dateTo || today;
   const professionalId = searchParams.professionalId || "";
   const status = searchParams.status || "";
-  const selectedDate = parseDateOnly(date);
 
   const [options, appointments] = await Promise.all([
     getAppointmentFormOptionsAction(),
     listAppointmentsAction({
-      dateFrom: selectedDate,
-      dateTo: selectedDate,
+      dateFrom: parseDateOnly(dateFrom),
+      dateTo: parseDateOnly(dateTo),
       professionalId: professionalId || undefined,
       status: (status || undefined) as AppointmentStatus | undefined,
     }),
   ]);
 
+  const periodLabel = `Período: ${formatDateOnlyBR(parseDateOnly(dateFrom))} a ${formatDateOnlyBR(parseDateOnly(dateTo))}`;
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <PrintHeader logoUrl={settings.logoUrl} businessName={settings.name} title="Agenda" subtitle={periodLabel} />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div>
           <h1 className="text-2xl font-semibold text-text">Agenda</h1>
           <p className="text-sm text-text-secondary">Serviço → profissional → data → horário.</p>
         </div>
-        {canCreate && <NewAppointmentButton options={options} />}
+        <div className="flex items-center gap-2">
+          <PrintButton label="Imprimir agenda" />
+          {canCreate && <NewAppointmentButton options={options} />}
+        </div>
       </div>
 
-      <AppointmentFilters date={date} professionalId={professionalId} status={status} professionals={options.professionals} />
+      <div className="print:hidden">
+        <DateRangeFilters dateFrom={dateFrom} dateTo={dateTo} />
+        <div className="mt-3">
+          <AppointmentFilters professionalId={professionalId} status={status} professionals={options.professionals} />
+        </div>
+      </div>
 
       <AppointmentList
         appointments={appointments}

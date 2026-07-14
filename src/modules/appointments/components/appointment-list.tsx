@@ -154,7 +154,7 @@ export function AppointmentList({
                   {appointment.notes && <p className="text-xs text-text-secondary">Obs: {appointment.notes}</p>}
                 </div>
 
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 print:hidden">
                   {canReschedule && (
                     <Button variant="secondary" size="sm" onClick={() => setEditing(appointment)}>
                       Reagendar
@@ -201,10 +201,10 @@ export function AppointmentList({
                 </div>
               </div>
               {rowErrors[appointment.id] && (
-                <p className="mt-2 text-sm text-danger">{rowErrors[appointment.id]}</p>
+                <p className="mt-2 text-sm text-danger print:hidden">{rowErrors[appointment.id]}</p>
               )}
               {rowSuccess[appointment.id] && (
-                <p className="mt-2 text-sm text-success">{rowSuccess[appointment.id]}</p>
+                <p className="mt-2 text-sm text-success print:hidden">{rowSuccess[appointment.id]}</p>
               )}
             </div>
           );
