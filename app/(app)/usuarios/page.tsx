@@ -20,9 +20,10 @@ export default async function UsuariosPage({
   const session = await auth();
   const currentUserId = session!.user!.id!;
 
-  const [canCreate, canUpdate] = await Promise.all([
+  const [canCreate, canUpdate, canDelete] = await Promise.all([
     hasPermission(PERMISSIONS.users.create),
     hasPermission(PERMISSIONS.users.update),
+    hasPermission(PERMISSIONS.users.delete),
   ]);
 
   const search = searchParams.search || "";
@@ -50,7 +51,7 @@ export default async function UsuariosPage({
 
       <UserFilters search={search} status={status} roleId={roleId} roles={options.roles} />
 
-      <UserList users={users} options={options} canUpdate={canUpdate} currentUserId={currentUserId} />
+      <UserList users={users} options={options} canUpdate={canUpdate} canDelete={canDelete} currentUserId={currentUserId} />
     </div>
   );
 }

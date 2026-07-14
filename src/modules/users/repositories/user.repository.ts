@@ -1,8 +1,6 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
+import { prisma, type PrismaOrTx } from "@/lib/prisma";
 import type { UserStatus } from "@/modules/users/schemas/user.schema";
-
-type PrismaOrTx = PrismaClient | Prisma.TransactionClient;
 
 const userInclude = {
   roles: { include: { role: { select: { id: true, name: true, slug: true } } } },
@@ -56,6 +54,11 @@ export class UserRepository {
 
   async updatePasswordHash(id: string, passwordHash: string): Promise<void> {
     await this.db.user.update({ where: { id }, data: { passwordHash } });
+  }
+
+  /** `UserRole` é `onDelete: Cascade` — não precisa limpeza manual. */
+  async delete(id: string): Promise<void> {
+    await this.db.user.delete({ where: { id } });
   }
 
   async listAllRolesForSelect() {

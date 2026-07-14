@@ -29,6 +29,13 @@ export class CannotModifySelfStatusError extends Error {
   }
 }
 
+export class CannotDeleteSelfError extends Error {
+  constructor() {
+    super("Você não pode excluir sua própria conta.");
+    this.name = "CannotDeleteSelfError";
+  }
+}
+
 export class UserService {
   async list(filters: ListUsersInput): Promise<UserListItem[]> {
     const repo = new UserRepository();
@@ -99,6 +106,21 @@ export class UserService {
 
     const passwordHash = await hashPassword(input.password);
     await repo.updatePasswordHash(input.id, passwordHash);
+  }
+
+  /**
+   * Exclui só a conta de login (User + UserRole). Profissional/Cliente vinculado
+   * e todo o histórico (agendamentos, pagamentos, caixa) continuam intactos —
+   * as FKs relevantes já são `onDelete: SetNull`.
+   */
+  async delete(id: string, currentUserId: string): Promise<void> {
+    if (id === currentUserId) throw new CannotDeleteSelfError();
+
+    const repo = new UserRepository();
+    const existing = await repo.findById(id);
+    if (!existing) throw new UserNotFoundError();
+
+    await repo.delete(id);
   }
 
   async getFormOptions(): Promise<UserFormOptions> {

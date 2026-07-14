@@ -7,19 +7,39 @@ import { Badge } from "@/components/ui/badge";
 import { UserStatusBadge } from "@/modules/users/components/user-status-badge";
 import { UserFormDialog } from "@/modules/users/components/user-form-dialog";
 import { ChangePasswordDialog } from "@/modules/users/components/change-password-dialog";
+import { deleteUserAction } from "@/modules/users/actions/delete-user.action";
 import type { UserFormOptions, UserListItem } from "@/modules/users/types/user.types";
 
 export interface UserListProps {
   users: UserListItem[];
   options: UserFormOptions;
   canUpdate: boolean;
+  canDelete: boolean;
   currentUserId: string;
 }
 
-export function UserList({ users, options, canUpdate, currentUserId }: UserListProps) {
+export function UserList({ users, options, canUpdate, canDelete, currentUserId }: UserListProps) {
   const router = useRouter();
   const [editing, setEditing] = useState<UserListItem | null>(null);
   const [changingPassword, setChangingPassword] = useState<UserListItem | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+
+  async function handleDelete(user: UserListItem) {
+    if (!confirm(`Excluir definitivamente a conta de login de ${user.name}? O profissional/cliente vinculado e o histórico continuam intactos.`)) return;
+
+    setPendingId(user.id);
+    setRowErrors((prev) => ({ ...prev, [user.id]: "" }));
+
+    const result = await deleteUserAction({ id: user.id });
+
+    setPendingId(null);
+    if (!result.success) {
+      setRowErrors((prev) => ({ ...prev, [user.id]: result.error }));
+      return;
+    }
+    router.refresh();
+  }
 
   if (users.length === 0) {
     return (
@@ -54,17 +74,32 @@ export function UserList({ users, options, canUpdate, currentUserId }: UserListP
                 </div>
               </div>
 
-              {canUpdate && (
+              {(canUpdate || canDelete) && (
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" size="sm" onClick={() => setEditing(user)}>
-                    Editar
-                  </Button>
-                  <Button variant="secondary" size="sm" onClick={() => setChangingPassword(user)}>
-                    Trocar senha
-                  </Button>
+                  {canUpdate && (
+                    <>
+                      <Button variant="secondary" size="sm" onClick={() => setEditing(user)}>
+                        Editar
+                      </Button>
+                      <Button variant="secondary" size="sm" onClick={() => setChangingPassword(user)}>
+                        Trocar senha
+                      </Button>
+                    </>
+                  )}
+                  {canDelete && user.id !== currentUserId && (
+                    <Button
+                      variant="danger"
+                      size="sm"
+                      disabled={pendingId === user.id}
+                      onClick={() => handleDelete(user)}
+                    >
+                      Excluir
+                    </Button>
+                  )}
                 </div>
               )}
             </div>
+            {rowErrors[user.id] && <p className="mt-2 text-sm text-danger">{rowErrors[user.id]}</p>}
           </div>
         ))}
       </div>
