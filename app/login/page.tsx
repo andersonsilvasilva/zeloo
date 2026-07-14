@@ -3,6 +3,18 @@ import { Scissors } from "lucide-react";
 import { LoginForm } from "@/modules/auth/components/login-form";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 
+/**
+ * Precisa ser dinâmica: como página estática, o Full Route Cache do Next
+ * também cacheia a resposta da Server Action de login vinculada a ela
+ * (confirmado via `x-nextjs-cache: HIT` no POST /login em produção) —
+ * login às vezes "não avançava" porque reexecutava a resposta de uma
+ * tentativa anterior em vez de autenticar de verdade. O `no-store` em
+ * next.config.js só evita cache do CDN/navegador, não do cache interno
+ * do Next. Página é leve (uma única consulta de settings), risco de EAGAIN
+ * bem menor que nas rotas públicas de agendamento.
+ */
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   const settings = await getGeneralSettingsAction();
 
