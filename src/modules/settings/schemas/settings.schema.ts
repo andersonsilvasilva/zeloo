@@ -9,9 +9,17 @@ export const SETTINGS_KEYS = {
   address: "barbershop.address",
   timezone: "barbershop.timezone",
   logoMediaId: "barbershop.logo_media_id",
+  faviconMediaId: "barbershop.favicon_media_id",
+  ogImageMediaId: "barbershop.og_image_media_id",
   instagram: "barbershop.instagram",
   facebook: "barbershop.facebook",
+  socialBio: "barbershop.social_bio",
+  mercadoPagoAccessToken: "mercadopago.access_token",
+  mercadoPagoWebhookSecret: "mercadopago.webhook_secret",
 } as const;
+
+/** Usada quando a barbearia ainda não configurou uma bio própria. */
+export const DEFAULT_SOCIAL_BIO = "Sistema de Gestão de Negócios - Multidisciplinar";
 
 export const DEFAULT_TIMEZONE = "America/Sao_Paulo";
 
@@ -56,6 +64,20 @@ export const generalSettingsSchema = z.object({
     .optional()
     .default("")
     .refine((v) => v === "" || z.string().url().safeParse(v).success, { message: "Link do Facebook inválido." }),
+  socialBio: z.string().trim().max(300).optional().default(""),
 });
 
 export type GeneralSettingsInput = z.infer<typeof generalSettingsSchema>;
+
+/**
+ * Campos em branco significam "não alterar" — a leitura (getMercadoPagoSettings)
+ * nunca devolve o segredo puro pro cliente, só uma versão mascarada, então não
+ * há como o form reenviar o valor atual; deixar em branco preserva o que já
+ * está salvo.
+ */
+export const mercadoPagoSettingsSchema = z.object({
+  accessToken: z.string().trim().max(300).optional().default(""),
+  webhookSecret: z.string().trim().max(300).optional().default(""),
+});
+
+export type MercadoPagoSettingsInput = z.infer<typeof mercadoPagoSettingsSchema>;

@@ -7,5 +7,15 @@ export interface GeneralSettings {
   timezone: string;
   instagram: string;
   facebook: string;
+  socialBio: string;
   logoUrl: string | null;
+  faviconUrl: string | null;
+  ogImageUrl: string | null;
+}
+
+export interface MercadoPagoSettings {
+  /** Nunca o valor puro — só uma versão mascarada (ex: "••••3538374516") pra exibição. */
+  accessTokenMasked: string | null;
+  webhookSecretMasked: string | null;
+  configured: boolean;
 }

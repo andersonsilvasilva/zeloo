@@ -18,6 +18,14 @@ export interface UploadInput {
   mimeType: string;
   /** Pasta lógica dentro do provider, ex: "professionals", "services", "logo" */
   folder: string;
+  /**
+   * Formato da variante "large" (a usada como referência/og:image). Padrão
+   * "webp". Usar "jpeg" para imagens que precisam ser lidas por crawlers de
+   * redes sociais (WhatsApp, Facebook, etc.), que têm suporte inconsistente
+   * a WEBP em preview de link — thumb/medium continuam sempre WEBP, pois só
+   * são usadas dentro do próprio app.
+   */
+  largeFormat?: "webp" | "jpeg";
 }
 
 export interface UploadResult {

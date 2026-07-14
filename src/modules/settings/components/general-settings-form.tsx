@@ -36,6 +36,7 @@ export function GeneralSettingsForm({ initialSettings }: { initialSettings: Gene
       timezone: initialSettings.timezone,
       instagram: initialSettings.instagram,
       facebook: initialSettings.facebook,
+      socialBio: initialSettings.socialBio,
     },
   });
 
@@ -104,6 +105,21 @@ export function GeneralSettingsForm({ initialSettings }: { initialSettings: Gene
           <Input id="facebook" type="url" placeholder="https://facebook.com/suabarbearia" {...register("facebook")} />
           {errors.facebook && <p className="text-sm text-danger">{errors.facebook.message}</p>}
         </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="socialBio">Bio/descrição para redes sociais</Label>
+        <Textarea
+          id="socialBio"
+          rows={2}
+          maxLength={300}
+          placeholder="Sistema de Gestão de Negócios - Multidisciplinar"
+          {...register("socialBio")}
+        />
+        <p className="text-xs text-text-secondary">
+          Aparece como descrição ao compartilhar o link nas redes sociais e no WhatsApp.
+        </p>
+        {errors.socialBio && <p className="text-sm text-danger">{errors.socialBio.message}</p>}
       </div>
 
       <div className="space-y-1">

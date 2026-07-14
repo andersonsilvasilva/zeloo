@@ -40,6 +40,12 @@ export class LocalStorageProvider implements StorageProvider {
 
     const image = sharp(input.buffer);
     const metadata = await image.metadata();
+    const largeFormat = input.largeFormat ?? "webp";
+    const largeExt = largeFormat === "jpeg" ? "jpg" : "webp";
+    const largePipeline =
+      largeFormat === "jpeg"
+        ? image.clone().resize(1200, 1200, { fit: "inside" }).flatten({ background: "#ffffff" }).jpeg({ quality: 90 })
+        : image.clone().resize(1200, 1200, { fit: "inside" }).webp({ quality: 90 });
 
     // Gera variantes; a "large" é a referência salva no banco (storagePath).
     await Promise.all([
@@ -47,11 +53,10 @@ export class LocalStorageProvider implements StorageProvider {
         .toFile(path.join(folderPath, `${baseName}-thumb.webp`)),
       image.clone().resize(500, 500, { fit: "inside" }).webp({ quality: 85 })
         .toFile(path.join(folderPath, `${baseName}-medium.webp`)),
-      image.clone().resize(1200, 1200, { fit: "inside" }).webp({ quality: 90 })
-        .toFile(path.join(folderPath, `${baseName}-large.webp`)),
+      largePipeline.toFile(path.join(folderPath, `${baseName}-large.${largeExt}`)),
     ]);
 
-    const storagePath = `${input.folder}/${baseName}-large.webp`;
+    const storagePath = `${input.folder}/${baseName}-large.${largeExt}`;
 
     return {
       fileName,
@@ -64,13 +69,13 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async delete(storagePath: string): Promise<void> {
-    const base = storagePath.replace(/-large\.webp$/, "");
-    const variants = ["thumb", "medium", "large"];
-    await Promise.all(
-      variants.map((v) =>
-        unlink(path.join(UPLOAD_ROOT, `${base}-${v}.webp`)).catch(() => undefined),
-      ),
-    );
+    const base = storagePath.replace(/-large\.(webp|jpg)$/, "");
+    await Promise.all([
+      unlink(path.join(UPLOAD_ROOT, `${base}-thumb.webp`)).catch(() => undefined),
+      unlink(path.join(UPLOAD_ROOT, `${base}-medium.webp`)).catch(() => undefined),
+      unlink(path.join(UPLOAD_ROOT, `${base}-large.webp`)).catch(() => undefined),
+      unlink(path.join(UPLOAD_ROOT, `${base}-large.jpg`)).catch(() => undefined),
+    ]);
   }
 
   getUrl(storagePath: string): string {
