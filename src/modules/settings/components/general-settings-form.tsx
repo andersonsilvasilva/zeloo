@@ -54,7 +54,7 @@ export function GeneralSettingsForm({ initialSettings }: { initialSettings: Gene
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
       <div className="space-y-1">
-        <Label htmlFor="name">Nome da barbearia</Label>
+        <Label htmlFor="name">Nome da Empresa</Label>
         <Input id="name" placeholder="Barbearia Premium" {...register("name")} />
         {errors.name && <p className="text-sm text-danger">{errors.name.message}</p>}
       </div>

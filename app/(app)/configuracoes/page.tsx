@@ -70,7 +70,7 @@ export default async function ConfiguracoesPage() {
             </div>
 
             <div className="rounded-xl border border-border bg-card p-5 lg:col-span-2">
-              <h2 className="mb-4 text-sm font-medium text-text">Dados da barbearia</h2>
+              <h2 className="mb-4 text-sm font-medium text-text">Dados da Empresa</h2>
               <GeneralSettingsForm initialSettings={settings} />
             </div>
           </div>
