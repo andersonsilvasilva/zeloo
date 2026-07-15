@@ -51,6 +51,9 @@ model User {
   appointmentsCreated  Appointment[]         @relation("AppointmentCreatedBy")
   messageLogs          MessageLog[]          @relation("MessageSentBy")
   pixChargesCreated    PixCharge[]           @relation("PixChargeCreatedBy")
+  accountEntriesCreated          AccountEntry[]          @relation("AccountEntryCreatedBy")
+  recurringAccountEntriesCreated RecurringAccountEntry[] @relation("RecurringAccountEntryCreatedBy")
+  commissionClosingsClosed       CommissionClosing[]     @relation("CommissionClosingClosedBy")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -145,6 +148,8 @@ model Client {
   profileImage          Media?        @relation("ClientProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
   appointments          Appointment[]
   messageLogs           MessageLog[]
+  accountEntries          AccountEntry[]
+  recurringAccountEntries RecurringAccountEntry[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -185,6 +190,7 @@ model Professional {
   services           ProfessionalService[]
   appointments       Appointment[]
   preferredByClients Client[]              @relation("PreferredProfessional")
+  commissionClosings CommissionClosing[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -400,8 +406,10 @@ model CashbookEntry {
   transactionDate DateTime          @map("transaction_date")
   notes           String?           @db.Text
 
-  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
-  createdBy User?    @relation("CashbookCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  payment           Payment?           @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  createdBy         User?              @relation("CashbookCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  accountEntry      AccountEntry?
+  commissionClosing CommissionClosing?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -453,6 +461,103 @@ model CashRegisterClosing {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("cash_register_closings")
+}
+
+enum AccountDirection {
+  PAYABLE
+  RECEIVABLE
+}
+
+enum AccountEntryStatus {
+  PENDING
+  SETTLED
+  CANCELLED
+}
+
+// Template de conta recorrente (ex.: "Aluguel", todo dia 5). AccountService
+// gera os AccountEntry de cada mês sob demanda (lazy, na leitura da lista) —
+// não existe job/cron; @@unique em AccountEntry garante que nunca duplica.
+model RecurringAccountEntry {
+  id               String           @id @default(cuid())
+  direction        AccountDirection
+  description      String
+  amount           Decimal          @db.Decimal(12, 2)
+  category         String?
+  counterpartyName String?          @map("counterparty_name") // fornecedor (PAYABLE) ou nome livre (RECEIVABLE)
+  clientId         String?          @map("client_id") // só RECEIVABLE
+  dayOfMonth       Int              @map("day_of_month") // 1-28, evita edge case de meses curtos
+  active           Boolean          @default(true)
+  createdById      String?          @map("created_by_id")
+
+  client    Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  createdBy User?          @relation("RecurringAccountEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  entries   AccountEntry[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([direction, active])
+  @@map("recurring_account_entries")
+}
+
+// Contas a Pagar (PAYABLE) e a Receber (RECEIVABLE) unificadas num só model,
+// mesmo padrão de CashbookEntry.type (CREDIT/DEBIT) — só o "contraparte" muda
+// (fornecedor em texto livre vs. cliente opcional). "Vencida" é calculado em
+// runtime (status ainda PENDING + dueDate no passado), não armazenado.
+model AccountEntry {
+  id               String              @id @default(cuid())
+  direction        AccountDirection
+  description      String
+  amount           Decimal             @db.Decimal(12, 2)
+  category         String?
+  counterpartyName String?             @map("counterparty_name")
+  clientId         String?             @map("client_id")
+  dueDate          DateTime            @map("due_date") @db.Date
+  status           AccountEntryStatus  @default(PENDING)
+  settledAt        DateTime?           @map("settled_at")
+  paymentMethod    PaymentMethod?      @map("payment_method")
+  cashbookEntryId  String?             @unique @map("cashbook_entry_id")
+  recurringEntryId String?             @map("recurring_entry_id")
+  createdById      String?             @map("created_by_id")
+  notes            String?             @db.Text
+
+  client         Client?                 @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  cashbookEntry  CashbookEntry?          @relation(fields: [cashbookEntryId], references: [id], onDelete: SetNull)
+  recurringEntry RecurringAccountEntry?  @relation(fields: [recurringEntryId], references: [id], onDelete: SetNull)
+  createdBy      User?                   @relation("AccountEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([recurringEntryId, dueDate])
+  @@index([direction, status])
+  @@index([dueDate])
+  @@map("account_entries")
+}
+
+// Fechamento de comissão de um profissional num período — mesmo padrão de
+// CashRegister/CashRegisterClosing: registro imutável, criado numa transação
+// que também gera o CashbookEntry (DEBIT) de pagamento da comissão. Sem
+// edição/estorno depois de fechado (ver README do módulo commissions).
+model CommissionClosing {
+  id               String   @id @default(cuid())
+  professionalId   String   @map("professional_id")
+  periodStart      DateTime @map("period_start") @db.Date
+  periodEnd        DateTime @map("period_end") @db.Date
+  calculatedAmount Decimal  @map("calculated_amount") @db.Decimal(12, 2)
+  finalAmount      Decimal  @map("final_amount") @db.Decimal(12, 2)
+  adjustmentNotes  String?  @map("adjustment_notes") @db.Text
+  cashbookEntryId  String?  @unique @map("cashbook_entry_id")
+  closedById       String?  @map("closed_by_id")
+  closedAt         DateTime @default(now()) @map("closed_at")
+
+  professional  Professional   @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  cashbookEntry CashbookEntry? @relation(fields: [cashbookEntryId], references: [id], onDelete: SetNull)
+  closedBy      User?          @relation("CommissionClosingClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
+
+  @@unique([professionalId, periodStart, periodEnd])
+  @@index([professionalId])
+  @@map("commission_closings")
 }
 
 // ----------------------------------------------------------------------------

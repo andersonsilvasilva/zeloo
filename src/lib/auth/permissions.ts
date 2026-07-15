@@ -38,6 +38,22 @@ export const PERMISSIONS = {
     create: "finance.create",
     update: "finance.update",
   },
+  payables: {
+    view: "payables.view",
+    create: "payables.create",
+    update: "payables.update",
+    delete: "payables.delete",
+  },
+  receivables: {
+    view: "receivables.view",
+    create: "receivables.create",
+    update: "receivables.update",
+    delete: "receivables.delete",
+  },
+  commissions: {
+    view: "commissions.view",
+    close: "commissions.close",
+  },
   reports: {
     view: "reports.view",
   },
@@ -85,6 +101,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleSlug, PermissionSlug[]> = {
     PERMISSIONS.clients.view,
     PERMISSIONS.services.view,
     PERMISSIONS.reports.view, // apenas indicadores próprios — filtrado na service layer
+    PERMISSIONS.commissions.view, // apenas o próprio fechamento — filtrado na service layer
   ],
   ATTENDANT: [
     PERMISSIONS.clients.view,
@@ -101,6 +118,12 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<RoleSlug, PermissionSlug[]> = {
     PERMISSIONS.finance.view,
     PERMISSIONS.finance.create,
     PERMISSIONS.finance.update,
+    PERMISSIONS.payables.view,
+    PERMISSIONS.payables.create,
+    PERMISSIONS.payables.update,
+    PERMISSIONS.receivables.view,
+    PERMISSIONS.receivables.create,
+    PERMISSIONS.receivables.update,
     PERMISSIONS.appointments.view,
     PERMISSIONS.clients.view, // para o box de aniversariantes e contexto do cliente ao receber pagamento
   ],

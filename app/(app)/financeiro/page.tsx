@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ClipboardList } from "lucide-react";
+import { CalendarClock, ClipboardList } from "lucide-react";
 import { hasPermission } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { ComingSoon } from "@/components/shared/coming-soon";
@@ -59,6 +59,13 @@ export default async function FinanceiroPage({
           >
             <ClipboardList size={16} />
             Ver balancete
+          </Link>
+          <Link
+            href="/financeiro/fechamento-mensal"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 text-sm font-medium text-text transition-colors hover:border-primary focus-gold"
+          >
+            <CalendarClock size={16} />
+            Ver fechamento mensal
           </Link>
           {canCreate && (
             <>
