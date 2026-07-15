@@ -3,6 +3,17 @@ import { listPublicProfessionalsAction } from "@/modules/booking/actions/list-pu
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { SelectionForm } from "@/modules/booking/components/selection-form";
 
+/**
+ * Sem isso, o Next pré-renderiza essa página como estática no build — e a
+ * lista de profissionais fica "congelada" com os dados do banco usado no
+ * momento do build. Como o build roda localmente (contra o banco de
+ * staging), um deploy pode sobrescrever a página com nomes/fotos
+ * desatualizados em relação ao que o usuário já editou direto em produção
+ * (aconteceu em 2026-07-15: profissionais renomeados/fotos trocadas em
+ * produção sumiram após um deploy que não tocava nesse fluxo).
+ */
+export const dynamic = "force-dynamic";
+
 export default async function EscolherPage() {
   const [settings, professionals] = await Promise.all([getGeneralSettingsAction(), listPublicProfessionalsAction()]);
 

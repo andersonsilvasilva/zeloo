@@ -2,6 +2,10 @@ import Link from "next/link";
 import { Scissors } from "lucide-react";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 
+// Mesmo motivo de app/agendar/escolher/page.tsx — sem isso, logo/nome ficam
+// "congelados" com os dados do banco usado no build.
+export const dynamic = "force-dynamic";
+
 export default async function AgendarLandingPage() {
   const settings = await getGeneralSettingsAction();
 
