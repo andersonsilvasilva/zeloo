@@ -6,9 +6,12 @@ import {
   addWeeks,
   startOfMonth,
   addMonths,
+  subMonths,
   startOfYear,
   addYears,
   subDays,
+  endOfMonth,
+  getDaysInMonth,
   format,
 } from "date-fns";
 import {
@@ -16,9 +19,11 @@ import {
   sumPaidRevenue,
   findCompletedAppointmentsInRange,
   findPaidPaymentsInRange,
+  findAccountEntriesForTrend,
   type DateRange,
 } from "@/modules/reports/repositories/dashboard.repository";
 import type {
+  AccountsTrendPoint,
   DashboardMetrics,
   NamedCount,
   NamedTotal,
@@ -27,6 +32,7 @@ import type {
 
 const REVENUE_TREND_DAYS = 30;
 const TOP_SERVICES_LIMIT = 5;
+const ACCOUNTS_TREND_MONTHS = 12;
 
 export class DashboardService {
   async getMetrics(): Promise<DashboardMetrics> {
@@ -40,6 +46,10 @@ export class DashboardService {
       start: subDays(startOfDay(now), REVENUE_TREND_DAYS - 1),
       end: addDays(startOfDay(now), 1),
     };
+    const accountsTrendRange: DateRange = {
+      start: startOfMonth(subMonths(now, ACCOUNTS_TREND_MONTHS - 1)),
+      end: addMonths(startOfMonth(now), 1),
+    };
 
     const [
       dayCount,
@@ -52,6 +62,7 @@ export class DashboardService {
       yearRevenue,
       monthAppointments,
       trendPayments,
+      accountsTrendEntries,
     ] = await Promise.all([
       countCompletedAppointments(dayRange),
       countCompletedAppointments(weekRange),
@@ -63,6 +74,7 @@ export class DashboardService {
       sumPaidRevenue(yearRange),
       findCompletedAppointmentsInRange(monthRange),
       findPaidPaymentsInRange(trendRange),
+      findAccountEntriesForTrend(accountsTrendRange),
     ]);
 
     const averageTicket = monthAppointments.length > 0 ? monthRevenue / monthAppointments.length : 0;
@@ -123,6 +135,8 @@ export class DashboardService {
       revenueTrend: this.dailyRevenueSeries(trendPayments, REVENUE_TREND_DAYS, now),
       serviceDistribution,
       professionalPerformance,
+      accountsTrendDaily: this.dailyAccountsSeries(accountsTrendEntries, now),
+      accountsTrendMonthly: this.monthlyAccountsSeries(accountsTrendEntries, ACCOUNTS_TREND_MONTHS, now),
     };
   }
 
@@ -154,6 +168,59 @@ export class DashboardService {
       const day = subDays(startOfDay(now), i);
       const key = format(day, "yyyy-MM-dd");
       series.push({ date: key, total: totals.get(key) ?? 0 });
+    }
+    return series;
+  }
+
+  private monthlyAccountsSeries(
+    entries: { direction: "PAYABLE" | "RECEIVABLE"; amount: { toNumber: () => number }; dueDate: Date }[],
+    months: number,
+    now: Date,
+  ): AccountsTrendPoint[] {
+    const totals = new Map<string, { payable: number; receivable: number }>();
+    for (const e of entries) {
+      const key = format(e.dueDate, "yyyy-MM");
+      const bucket = totals.get(key) ?? { payable: 0, receivable: 0 };
+      if (e.direction === "PAYABLE") bucket.payable += e.amount.toNumber();
+      else bucket.receivable += e.amount.toNumber();
+      totals.set(key, bucket);
+    }
+
+    const series: AccountsTrendPoint[] = [];
+    for (let i = months - 1; i >= 0; i--) {
+      const monthRef = subMonths(startOfMonth(now), i);
+      const key = format(monthRef, "yyyy-MM");
+      const bucket = totals.get(key) ?? { payable: 0, receivable: 0 };
+      series.push({ date: key, ...bucket });
+    }
+    return series;
+  }
+
+  /** Contas do mês atual, por dia (dueDate) — granularidade "mês atual" do gráfico do dashboard. */
+  private dailyAccountsSeries(
+    entries: { direction: "PAYABLE" | "RECEIVABLE"; amount: { toNumber: () => number }; dueDate: Date }[],
+    now: Date,
+  ): AccountsTrendPoint[] {
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+
+    const totals = new Map<string, { payable: number; receivable: number }>();
+    for (const e of entries) {
+      if (e.dueDate < monthStart || e.dueDate > monthEnd) continue;
+      const key = format(e.dueDate, "yyyy-MM-dd");
+      const bucket = totals.get(key) ?? { payable: 0, receivable: 0 };
+      if (e.direction === "PAYABLE") bucket.payable += e.amount.toNumber();
+      else bucket.receivable += e.amount.toNumber();
+      totals.set(key, bucket);
+    }
+
+    const series: AccountsTrendPoint[] = [];
+    const days = getDaysInMonth(now);
+    for (let i = 0; i < days; i++) {
+      const day = addDays(monthStart, i);
+      const key = format(day, "yyyy-MM-dd");
+      const bucket = totals.get(key) ?? { payable: 0, receivable: 0 };
+      series.push({ date: key, ...bucket });
     }
     return series;
   }

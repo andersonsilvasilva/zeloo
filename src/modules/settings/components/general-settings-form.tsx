@@ -33,6 +33,7 @@ export function GeneralSettingsForm({ initialSettings }: { initialSettings: Gene
       whatsapp: initialSettings.whatsapp,
       email: initialSettings.email,
       address: initialSettings.address,
+      googleMapsUrl: initialSettings.googleMapsUrl,
       timezone: initialSettings.timezone,
       instagram: initialSettings.instagram,
       facebook: initialSettings.facebook,
@@ -91,6 +92,18 @@ export function GeneralSettingsForm({ initialSettings }: { initialSettings: Gene
         <Label htmlFor="address">Endereço</Label>
         <Textarea id="address" rows={2} placeholder="Rua Exemplo, 123 — Centro" {...register("address")} />
         {errors.address && <p className="text-sm text-danger">{errors.address.message}</p>}
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="googleMapsUrl">Localização (Google Maps)</Label>
+        <Input
+          id="googleMapsUrl"
+          type="url"
+          placeholder="https://maps.app.goo.gl/..."
+          {...register("googleMapsUrl")}
+        />
+        <p className="text-xs text-text-secondary">Link do Google Maps com a localização da empresa.</p>
+        {errors.googleMapsUrl && <p className="text-sm text-danger">{errors.googleMapsUrl.message}</p>}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

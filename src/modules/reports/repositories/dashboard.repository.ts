@@ -41,3 +41,11 @@ export function findPaidPaymentsInRange(range: DateRange) {
     select: { amount: true, paidAt: true },
   });
 }
+
+/** Contas a pagar/receber com vencimento no período (exclui canceladas) — base do gráfico de tendência do dashboard. */
+export function findAccountEntriesForTrend(range: DateRange) {
+  return prisma.accountEntry.findMany({
+    where: { status: { not: "CANCELLED" }, dueDate: { gte: range.start, lt: range.end } },
+    select: { direction: true, amount: true, dueDate: true },
+  });
+}

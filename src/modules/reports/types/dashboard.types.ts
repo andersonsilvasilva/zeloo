@@ -27,6 +27,12 @@ export interface RevenueTrendPoint {
   total: number;
 }
 
+export interface AccountsTrendPoint {
+  date: string;
+  payable: number;
+  receivable: number;
+}
+
 export interface DashboardMetrics {
   counts: DashboardCounts;
   revenue: DashboardRevenue;
@@ -38,4 +44,6 @@ export interface DashboardMetrics {
   revenueTrend: RevenueTrendPoint[];
   serviceDistribution: NamedCount[];
   professionalPerformance: NamedTotal[];
+  accountsTrendDaily: AccountsTrendPoint[];
+  accountsTrendMonthly: AccountsTrendPoint[];
 }

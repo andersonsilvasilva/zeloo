@@ -11,6 +11,7 @@ import { StatCard } from "@/modules/reports/components/stat-card";
 import { RevenueLineChart } from "@/modules/reports/components/revenue-line-chart";
 import { ServicePieChart } from "@/modules/reports/components/service-pie-chart";
 import { ProfessionalBarChart } from "@/modules/reports/components/professional-bar-chart";
+import { AccountsTrendChart } from "@/modules/reports/components/accounts-trend-chart";
 import { BirthdaysBox } from "@/modules/clients/components/birthdays-box";
 import { TodayScheduleBox } from "@/modules/appointments/components/today-schedule-box";
 import { formatCurrency, formatCompactNumber } from "@/lib/utils/format";
@@ -130,6 +131,11 @@ export default async function DashboardPage() {
         <div className="rounded-xl border border-border bg-card p-5">
           <h2 className="mb-4 text-sm font-medium text-text">Desempenho dos profissionais (mês atual)</h2>
           <ProfessionalBarChart data={metrics.professionalPerformance} />
+        </div>
+
+        <div className="rounded-xl border border-border bg-card p-5 xl:col-span-2">
+          <h2 className="mb-4 text-sm font-medium text-text">Contas a pagar x a receber</h2>
+          <AccountsTrendChart daily={metrics.accountsTrendDaily} monthly={metrics.accountsTrendMonthly} />
         </div>
       </section>
     </div>

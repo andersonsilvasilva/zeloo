@@ -7,6 +7,7 @@ export const SETTINGS_KEYS = {
   whatsapp: "barbershop.whatsapp",
   email: "barbershop.email",
   address: "barbershop.address",
+  googleMapsUrl: "barbershop.google_maps_url",
   timezone: "barbershop.timezone",
   logoMediaId: "barbershop.logo_media_id",
   faviconMediaId: "barbershop.favicon_media_id",
@@ -49,6 +50,13 @@ export const generalSettingsSchema = z.object({
     .default("")
     .refine((v) => v === "" || z.string().email().safeParse(v).success, { message: "E-mail inválido." }),
   address: z.string().trim().max(300).optional().default(""),
+  googleMapsUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .default("")
+    .refine((v) => v === "" || z.string().url().safeParse(v).success, { message: "Link do Google Maps inválido." }),
   timezone: z.string().refine((v) => TIMEZONE_VALUES.has(v), { message: "Selecione um fuso horário válido." }),
   instagram: z
     .string()

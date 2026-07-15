@@ -4,6 +4,7 @@ export interface GeneralSettings {
   whatsapp: string;
   email: string;
   address: string;
+  googleMapsUrl: string;
   timezone: string;
   instagram: string;
   facebook: string;
