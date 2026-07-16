@@ -4,6 +4,11 @@ import { getPublicProfessionalProfileAction } from "@/modules/booking/actions/ge
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { ProfessionalProfile } from "@/modules/booking/components/professional-profile";
 
+// Mesmo motivo de app/agendar/page.tsx — sem isso, settings ficam "congelados"
+// com os dados do banco usado no build (e agora, com isolamento de tenant da
+// Fase 4, o build nem teria contexto de tenant pra essa leitura funcionar).
+export const dynamic = "force-dynamic";
+
 export default async function ProfissionalPage({
   searchParams,
 }: {

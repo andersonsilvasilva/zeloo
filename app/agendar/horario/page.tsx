@@ -3,6 +3,11 @@ import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { SchedulePicker } from "@/modules/booking/components/schedule-picker";
 
+// Mesmo motivo de app/agendar/page.tsx — sem isso, settings ficam "congelados"
+// com os dados do banco usado no build (e agora, com isolamento de tenant da
+// Fase 4, o build nem teria contexto de tenant pra essa leitura funcionar).
+export const dynamic = "force-dynamic";
+
 export default async function HorarioPage({
   searchParams,
 }: {

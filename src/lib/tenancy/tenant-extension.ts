@@ -1,0 +1,106 @@
+import { Prisma } from "@prisma/client";
+import { getCurrentTenant } from "@/lib/tenancy/current-tenant";
+
+/**
+ * Isolamento obrigatório de consultas — Fase 4 (CLAUDE_CODE_MULTI_TENANT_ZELOO.md
+ * §24-27). Extensão do Prisma Client, mesmo padrão de src/lib/audit/audit-extension.ts
+ * (intercepta em `$allModels.$allOperations`, resolve contexto via `headers()`/
+ * `getCurrentTenant()` — não `AsyncLocalStorage` própria, pelo motivo já
+ * documentado no audit-extension: o dataloader do Prisma quebra a continuidade
+ * do `async_hooks` antes da query rodar).
+ *
+ * Regra deny-by-default (§24): toda operação nos modelos tenant-owned FALHA
+ * (lança `MissingTenantContextError`) se não houver tenant resolvido no
+ * contexto da requisição — nunca cai silenciosamente para "sem filtro" (que
+ * vazaria dado de todos os tenants) nem para "primeiro tenant encontrado".
+ *
+ * Escritas (§26): `tenantId` enviado pelo chamador é sempre ignorado/
+ * sobrescrito pelo valor do contexto — nunca confia em tenantId vindo de
+ * fora (data ou where) exceto o que a própria extensão injeta aqui.
+ */
+
+export class MissingTenantContextError extends Error {
+  constructor(model: string, operation: string) {
+    super(`Operação "${operation}" em "${model}" exige um tenant no contexto da requisição, mas nenhum foi resolvido.`);
+    this.name = "MissingTenantContextError";
+  }
+}
+
+/**
+ * Modelos tenant-owned (ver docs/tenancy/02-data-migration.md §2) — mesma
+ * lista das tabelas que ganharam `tenant_id` na Etapa A. Nomes de model do
+ * Prisma (PascalCase), não de tabela.
+ */
+const HARD_TENANT_MODELS = new Set([
+  "UserRole",
+  "Client",
+  "Professional",
+  "Service",
+  "Appointment",
+  "Payment",
+  "PixCharge",
+  "CashbookEntry",
+  "CashRegister",
+  "CashRegisterClosing",
+  "RecurringAccountEntry",
+  "AccountEntry",
+  "CommissionClosing",
+  "MessageTemplate",
+  "MessageLog",
+  "Media",
+  "Setting",
+]);
+
+/**
+ * AuditLog é híbrido de propósito (ver schema.prisma) — ações de plataforma
+ * nunca têm tenant. Recebe tenantId quando disponível, mas nunca bloqueia
+ * por falta dele.
+ */
+const SOFT_TENANT_MODELS = new Set(["AuditLog"]);
+
+const READ_OPERATIONS = new Set(["findMany", "findFirst", "findFirstOrThrow", "findUnique", "findUniqueOrThrow", "count", "aggregate", "groupBy"]);
+const SCOPED_WRITE_OPERATIONS = new Set(["update", "updateMany", "upsert", "delete", "deleteMany"]);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mergeWhereTenantId(where: any, tenantId: string): any {
+  return { ...where, tenantId };
+}
+
+export const tenantExtension = Prisma.defineExtension({
+  name: "tenant-isolation",
+  query: {
+    $allModels: {
+      async $allOperations({ model, operation, args, query }) {
+        const isHard = HARD_TENANT_MODELS.has(model);
+        const isSoft = SOFT_TENANT_MODELS.has(model);
+        if (!isHard && !isSoft) return query(args);
+
+        const tenant = await getCurrentTenant().catch(() => null);
+        const tenantId = tenant?.id ?? null;
+
+        if (!tenantId) {
+          if (isHard) throw new MissingTenantContextError(model, operation);
+          return query(args); // soft (AuditLog): segue sem tenant_id quando não há contexto
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const typedArgs = (args ?? {}) as any;
+
+        if (operation === "create") {
+          typedArgs.data = { ...typedArgs.data, tenantId };
+        } else if (operation === "createMany") {
+          typedArgs.data = Array.isArray(typedArgs.data)
+            ? typedArgs.data.map((d: object) => ({ ...d, tenantId }))
+            : typedArgs.data;
+        } else if (operation === "upsert") {
+          typedArgs.where = mergeWhereTenantId(typedArgs.where, tenantId);
+          typedArgs.create = { ...typedArgs.create, tenantId };
+        } else if (READ_OPERATIONS.has(operation) || SCOPED_WRITE_OPERATIONS.has(operation)) {
+          typedArgs.where = mergeWhereTenantId(typedArgs.where, tenantId);
+        }
+
+        return query(typedArgs);
+      },
+    },
+  },
+});
