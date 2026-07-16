@@ -14,7 +14,8 @@
     "prisma:seed": "prisma db seed",
     "prisma:seed:demo": "tsx prisma/seed-demo.ts",
     "prisma:seed:demo:appointments": "tsx prisma/seed-demo-appointments.ts",
-    "tenancy:backfill": "tsx prisma/tenancy-backfill.ts"
+    "tenancy:backfill": "tsx prisma/tenancy-backfill.ts",
+    "tenancy:storage-migrate": "tsx prisma/tenancy-storage-migrate.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
