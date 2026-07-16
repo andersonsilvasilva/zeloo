@@ -128,14 +128,14 @@ Nenhuma tabela tem `tenant_id` ou equivalente hoje — confirmado por busca (`gr
 | `Setting` | **Tenant-owned — mudança estrutural relevante** | Sim | Hoje é `key` `@unique` global (key-value flat). Precisa virar `@@unique([tenantId, key])`. **Usado pervasivamente**: branding, timezone, endereço, link do Google Maps, credenciais Mercado Pago, redes sociais — todo o módulo `settings` (repository + service) precisa ser revisado | **Alto** — é a tabela mais transversal do sistema |
 | `AuditLog` | Híbrido | `tenant_id` nullable | Ações de plataforma (ex.: criação de tenant) não têm tenant; ações operacionais têm | Baixo |
 
-## 12. Decisões de negócio que a Fase 0 não pode inventar
+## 12. Decisões de negócio (respondidas em 2026-07-15)
 
-Conforme regra do spec (§73: "quando uma decisão depender obrigatoriamente de informação comercial não presente no projeto... implemente uma variável obrigatória... sem inventar o valor"), os pontos abaixo **precisam de resposta do usuário antes da Fase 1**:
+Conforme regra do spec (§73: "quando uma decisão depender obrigatoriamente de informação comercial não presente no projeto... implemente uma variável obrigatória... sem inventar o valor"), as decisões abaixo foram confirmadas diretamente pelo usuário:
 
-1. **Um mesmo login pode pertencer a mais de um tenant?** (ex.: um contador/dono cuidando de duas barbearias com a mesma conta). Se sim, `User` vira identidade global + tabela `tenant_users`/`memberships` (modelo recomendado pelo spec §12, mais flexível, mais trabalho de migração). Se não — cada conta pertence a um negócio só, hoje e sempre — `tenant_id` pode ir direto em `User`, com `email` deixando de ser único globalmente e passando a `@@unique([tenantId, email])` (mais simples, migração mais rápida, mas fecha a porta pra esse cenário depois sem nova migração).
-2. **Qual o slug/nome do tenant inicial** pro backfill dos dados reais de produção (91 agendamentos, 16+ clientes, pagamentos, etc., já migrados uma vez pra VPS)? O spec proíbe explicitamente escolher isso automaticamente.
-3. **Twilio/Zenvia são canais realmente em uso ou código morto?** Preciso confirmar antes de decidir se viram configuração por tenant ou se somem da lista de integrações a migrar.
-4. **O ambiente de produção atual está em uso ativo por um cliente real hoje** (usado pra demonstração comercial nesta mesma semana, dados fictícios de contas a pagar/receber inseridos pra demo). Qualquer trabalho de Fase 3+ (migração de banco) precisa de janela de manutenção combinada — não é um projeto greenfield.
+1. **Um mesmo login pode pertencer a mais de um tenant? → SIM.** `User` vai virar identidade global + tabela `tenant_users`/`memberships` (modelo recomendado pelo spec §12). Implica: `User.email` continua único globalmente (não muda pra único-por-tenant); a associação usuário↔tenant, o papel (`UserRole`) e o "tenant atual" da sessão vivem na camada de membership, não em `User` diretamente.
+2. **Slug do tenant inicial (backfill dos dados reais) → `zeloo`.** Ressalva já levantada e aceita: como o domínio base da plataforma também é `zeloo.net`, o tenant "dono" em `zeloo.zeloo.net` é uma URL atípica — vale revisitar na Fase 1 se esse tenant deve viver no domínio raiz (`zeloo.net` sem subdomínio) em vez de um subdomínio próprio, mas o slug interno (`tenants.slug = "zeloo"`) fica definido.
+3. **Twilio/Zenvia → não estão em uso.** Tratar como não prioritários na migração (as vars seguem só em `.env.example`, sem integração ativa a adaptar por tenant).
+4. **Produção em uso comercial ativo (inclusive demo a clientes na semana desta auditoria)** — segue valendo: qualquer migração de dados (Fase 3+) exige backup + janela de manutenção combinada, não é ambiente de teste.
 
 ## 13. Riscos gerais encontrados (resumo)
 
