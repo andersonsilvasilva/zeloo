@@ -41,6 +41,7 @@ model User {
   image        String?
 
   roles                UserRole[]
+  tenantMemberships    TenantUser[]
   client               Client?
   professional         Professional?
   auditLogs            AuditLog[]
@@ -122,6 +123,155 @@ model UserRole {
 
   @@unique([userId, roleId])
   @@map("user_roles")
+}
+
+// ----------------------------------------------------------------------------
+// MULTI-TENANCY (Fase 1 — ver docs/tenancy/01-architecture.md)
+// ----------------------------------------------------------------------------
+// Só tabelas novas nesta fase. Nenhuma tabela acima (User, etc.) foi alterada
+// — tenant_id nas tabelas existentes é trabalho da Fase 3 (migração
+// expandir->migrar->restringir), ainda não iniciada.
+
+model Tenant {
+  id           String       @id @default(cuid())
+  name         String
+  slug         String       @unique
+  status       TenantStatus @default(TRIAL)
+  planId       String?      @map("plan_id")
+  customDomain String?      @map("custom_domain")
+  timezone     String       @default("America/Sao_Paulo")
+  locale       String       @default("pt-BR")
+  settings     Json?
+  trialEndsAt  DateTime?    @map("trial_ends_at")
+
+  members       TenantUser[]
+  subscriptions Subscription[]
+  limits        TenantLimit[]
+  usageRecords  UsageRecord[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tenants")
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+// Membership: liga um User (identidade global) a um Tenant. Não tem role_id
+// (diferente do exemplo conceitual do spec) — a atribuição de papel continua
+// via UserRole, que ganha tenant_id na Fase 3 (ver docs/tenancy/01-architecture.md §2).
+model TenantUser {
+  id       String           @id @default(cuid())
+  tenantId String           @map("tenant_id")
+  userId   String           @map("user_id")
+  status   TenantUserStatus @default(ACTIVE)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, userId])
+  @@map("tenant_users")
+}
+
+enum TenantUserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+model Plan {
+  id     String  @id @default(cuid())
+  name   String
+  slug   String  @unique
+  active Boolean @default(true)
+
+  features      PlanFeature[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("plans")
+}
+
+// Uma linha por recurso do plano (ex.: key="appointments_per_month", value="3000",
+// key="pix", value="true") — mesmo padrão key-value já usado por `Setting`.
+model PlanFeature {
+  id     String @id @default(cuid())
+  planId String @map("plan_id")
+  key    String
+  value  String
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, key])
+  @@map("plan_features")
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  tenantId           String             @map("tenant_id")
+  planId             String             @map("plan_id")
+  status             SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime?          @map("current_period_start")
+  currentPeriodEnd   DateTime?          @map("current_period_end")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+// Override pontual de um limite de plano pra um tenant específico.
+model TenantLimit {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+  key      String
+  value    String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, key])
+  @@map("tenant_limits")
+}
+
+// Consumo real medido por tenant/período/métrica — base pro UsageLimitService.
+model UsageRecord {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+  key      String
+  period   String // "yyyy-MM"
+  value    Int    @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, key, period])
+  @@map("usage_records")
 }
 
 // ----------------------------------------------------------------------------
