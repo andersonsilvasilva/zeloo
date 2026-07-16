@@ -36,6 +36,13 @@ export class TenancyRepository {
     });
   }
 
+  /** Login por tenant (Fase 5, spec §29 passo 3) — associação ativa entre usuário e tenant. */
+  async findActiveMembership(tenantId: string, userId: string) {
+    return this.db.tenantUser.findFirst({
+      where: { tenantId, userId, status: "ACTIVE" },
+    });
+  }
+
   /** Assinatura ativa (ou em trial) mais recente do tenant, com o plano e seus recursos. */
   async findActiveSubscription(tenantId: string) {
     return this.db.subscription.findFirst({
