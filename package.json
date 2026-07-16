@@ -13,7 +13,8 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:seed": "prisma db seed",
     "prisma:seed:demo": "tsx prisma/seed-demo.ts",
-    "prisma:seed:demo:appointments": "tsx prisma/seed-demo-appointments.ts"
+    "prisma:seed:demo:appointments": "tsx prisma/seed-demo-appointments.ts",
+    "tenancy:backfill": "tsx prisma/tenancy-backfill.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
