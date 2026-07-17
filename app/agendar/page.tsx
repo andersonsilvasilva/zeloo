@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { Scissors } from "lucide-react";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
+import { requireCurrentTenant } from "@/lib/tenancy/current-tenant";
 
 // Mesmo motivo de app/agendar/escolher/page.tsx — sem isso, logo/nome ficam
 // "congelados" com os dados do banco usado no build.
 export const dynamic = "force-dynamic";
 
 export default async function AgendarLandingPage() {
+  // Fase 14 (spec §67) — sem isso, um subdomínio de tenant inexistente cai
+  // 500 aqui (settings exige tenant no contexto) em vez de uma resposta
+  // controlada. Ver mesmo comentário em app/login/page.tsx.
+  await requireCurrentTenant();
+
   const settings = await getGeneralSettingsAction();
 
   return (

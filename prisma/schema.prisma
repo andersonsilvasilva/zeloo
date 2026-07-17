@@ -128,7 +128,13 @@ model UserRole {
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@unique([userId, roleId])
+  // Corrigido na Fase 14 (achado real na verificação do critério "usuário com
+  // múltiplos tenants opera em um tenant por vez", spec §67): a constraint
+  // original (@@unique([userId, roleId])), de antes da Fase 3 acrescentar
+  // tenantId, nunca foi revisada — impedia o MESMO usuário de ter o MESMO
+  // papel (ex.: ADMIN) em dois tenants diferentes. Ver
+  // docs/tenancy/13-acceptance-criteria.md.
+  @@unique([tenantId, userId, roleId])
   @@index([tenantId])
   @@map("user_roles")
 }

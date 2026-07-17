@@ -3,6 +3,7 @@ import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general
 import { getPublicProfessionalProfileAction } from "@/modules/booking/actions/get-public-professional-profile.action";
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { ProfessionalProfile } from "@/modules/booking/components/professional-profile";
+import { requireCurrentTenant } from "@/lib/tenancy/current-tenant";
 
 // Mesmo motivo de app/agendar/page.tsx — sem isso, settings ficam "congelados"
 // com os dados do banco usado no build (e agora, com isolamento de tenant da
@@ -15,6 +16,10 @@ export default async function ProfissionalPage({
   searchParams: { professionalId?: string };
 }) {
   if (!searchParams.professionalId) redirect("/agendar/escolher");
+
+  // Fase 14 (spec §67) — resposta controlada pra subdomínio de tenant
+  // inexistente, ver app/login/page.tsx.
+  await requireCurrentTenant();
 
   const [settings, result] = await Promise.all([
     getGeneralSettingsAction(),

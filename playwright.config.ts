@@ -20,7 +20,7 @@ export default defineConfig({
     trace: "retain-on-failure",
     launchOptions: {
       args: [
-        "--host-resolver-rules=MAP zeloo.net 127.0.0.1,MAP flora.zeloo.net 127.0.0.1,MAP diagro.zeloo.net 127.0.0.1",
+        "--host-resolver-rules=MAP zeloo.net 127.0.0.1,MAP flora.zeloo.net 127.0.0.1,MAP diagro.zeloo.net 127.0.0.1,MAP naoexiste.zeloo.net 127.0.0.1,MAP suspenso.zeloo.net 127.0.0.1",
       ],
     },
   },

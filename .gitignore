@@ -1,6 +1,12 @@
 node_modules/
 .next/
-.env
+# Fase 14 (spec §70, "não há segredos versionados") — ".env" sozinho só
+# cobre o nome exato; ".env_old"/".env.backup"/etc. (comum aparecer durante
+# deploys/investigações, ver docs/tenancy/11-deployment-runbook.md) ficavam
+# desprotegidos e um "git add -A" descuidado os versionaria com credenciais
+# reais dentro. ".env.example" é a única exceção de propósito.
+.env*
+!.env.example
 public/uploads/
 *.log
 .DS_Store

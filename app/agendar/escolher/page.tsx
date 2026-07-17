@@ -2,6 +2,7 @@ import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general
 import { listPublicProfessionalsAction } from "@/modules/booking/actions/list-public-professionals.action";
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { SelectionForm } from "@/modules/booking/components/selection-form";
+import { requireCurrentTenant } from "@/lib/tenancy/current-tenant";
 
 /**
  * Sem isso, o Next pré-renderiza essa página como estática no build — e a
@@ -15,6 +16,10 @@ import { SelectionForm } from "@/modules/booking/components/selection-form";
 export const dynamic = "force-dynamic";
 
 export default async function EscolherPage() {
+  // Fase 14 (spec §67) — resposta controlada pra subdomínio de tenant
+  // inexistente, ver app/login/page.tsx.
+  await requireCurrentTenant();
+
   const [settings, professionals] = await Promise.all([getGeneralSettingsAction(), listPublicProfessionalsAction()]);
 
   return (

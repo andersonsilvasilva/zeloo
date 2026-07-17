@@ -17,6 +17,10 @@ import { test, expect, type APIRequestContext } from "@playwright/test";
  *   próprias (branding cai no fallback genérico).
  * - diagro (TRIAL) — dona.diagro@teste.local / DiagroTeste@123, sem
  *   clientes, sem settings próprias.
+ * - consultora.multitenant@teste.local / MultiTenant@123 — mesmo usuário
+ *   (User.email é globalmente único), com membership ADMIN em flora E em
+ *   diagro (spec §67, "usuário com múltiplos tenants opera em um tenant por
+ *   vez") — nunca em produção, fixture criada na Fase 14.
  */
 
 const ROOT = "http://zeloo.net:3000";
@@ -135,4 +139,73 @@ test.describe("Isolamento de autenticação (spec §29/Fase 5)", () => {
     });
     expect(new URL(page.url()).hostname).toBe("flora.zeloo.net");
   });
+});
+
+test.describe("Usuário com múltiplos tenants opera em um tenant por vez (spec §67, Fase 14)", () => {
+  // Achado real durante essa verificação: UserRole tinha
+  // @@unique([userId, roleId]) — de antes da Fase 3 acrescentar tenantId,
+  // nunca revisado — impedia o MESMO usuário de ter o MESMO papel em dois
+  // tenants diferentes. Corrigido pra @@unique([tenantId, userId, roleId])
+  // na migration 20260717164314_fix_user_role_unique_per_tenant. Ver
+  // docs/tenancy/13-acceptance-criteria.md.
+  test("mesmo e-mail loga em flora E em diagro, cada sessão só enxerga o próprio tenant", async ({ browser }) => {
+    const contextFlora = await browser.newContext();
+    const pageFlora = await contextFlora.newPage();
+    await pageFlora.goto(`${FLORA}/login`);
+    await pageFlora.locator("#email").fill("consultora.multitenant@teste.local");
+    await pageFlora.locator("#password").fill("MultiTenant@123");
+    await pageFlora.getByRole("button", { name: "Entrar" }).click();
+    await pageFlora.waitForURL((url) => url.hostname === "flora.zeloo.net" && !url.pathname.startsWith("/login"), {
+      timeout: 15_000,
+    });
+
+    const contextDiagro = await browser.newContext();
+    const pageDiagro = await contextDiagro.newPage();
+    await pageDiagro.goto(`${DIAGRO}/login`);
+    await pageDiagro.locator("#email").fill("consultora.multitenant@teste.local");
+    await pageDiagro.locator("#password").fill("MultiTenant@123");
+    await pageDiagro.getByRole("button", { name: "Entrar" }).click();
+    await pageDiagro.waitForURL((url) => url.hostname === "diagro.zeloo.net" && !url.pathname.startsWith("/login"), {
+      timeout: 15_000,
+    });
+
+    // As duas sessões (contextos de navegador separados, cookies host-only
+    // diferentes) coexistem — uma não derruba nem contamina a outra.
+    const [debugFlora, debugDiagro] = await Promise.all([
+      pageFlora.request.get(`${FLORA}/api/tenant-debug`).then((r) => r.json()),
+      pageDiagro.request.get(`${DIAGRO}/api/tenant-debug`).then((r) => r.json()),
+    ]);
+    expect(debugFlora.tenant.slug).toBe("flora");
+    expect(debugDiagro.tenant.slug).toBe("diagro");
+
+    await contextFlora.close();
+    await contextDiagro.close();
+  });
+});
+
+test.describe("Resposta controlada pra tenant inexistente/suspenso (spec §67, Fase 14)", () => {
+  const NAOEXISTE = "http://naoexiste.zeloo.net:3000";
+  const SUSPENSO = "http://suspenso.zeloo.net:3000";
+
+  // Bug real encontrado na verificação da Fase 14: essas páginas liam
+  // settings sem checar antes se o tenant existe — em produção, um
+  // subdomínio de tenant inexistente caía 500 (MissingTenantContextError,
+  // ver docs/tenancy/13-acceptance-criteria.md), nunca 404. Nenhum dado
+  // vazava (o deny-by-default segurou), mas a resposta não era controlada.
+  // Corrigido adicionando `requireCurrentTenant()` no topo de /login e de
+  // todas as páginas do fluxo público /agendar/*.
+  for (const path of ["/", "/login", "/agendar", "/agendar/escolher"]) {
+    test(`${path} em subdomínio inexistente retorna 404, não 500`, async ({ page }) => {
+      const response = await page.goto(`${NAOEXISTE}${path}`);
+      expect(response?.status()).toBe(404);
+    });
+  }
+
+  for (const path of ["/", "/login", "/agendar", "/agendar/escolher"]) {
+    test(`${path} em tenant SUSPENDED redireciona pra /tenant-indisponivel`, async ({ page }) => {
+      await page.goto(`${SUSPENSO}${path}`);
+      await page.waitForURL((url) => url.pathname === "/tenant-indisponivel", { timeout: 10_000 });
+      expect(new URL(page.url()).hostname).toBe("suspenso.zeloo.net");
+    });
+  }
 });
