@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentTenant, getCurrentTenantContext, getCurrentTenantSlug } from "@/lib/tenancy/current-tenant";
+import { provisionTenant } from "@/modules/tenancy/services/tenant-onboarding.service";
 
 /**
  * Rota de diagnóstico da Fase 2/4 — mostra o que o middleware resolveu pra
@@ -50,4 +51,18 @@ export async function GET(request: Request) {
     isolationError,
     probe,
   });
+}
+
+/**
+ * Teste do provisionamento (Fase 9) — só pra verificação local nesta fase.
+ * body: { tenantName, slug, ownerName, ownerEmail, ownerPassword }
+ */
+export async function POST(request: Request) {
+  const body = await request.json();
+  try {
+    const result = await provisionTenant(body);
+    return NextResponse.json(result);
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? `${e.constructor.name}: ${e.message}` : String(e) }, { status: 400 });
+  }
 }
