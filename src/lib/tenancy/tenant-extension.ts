@@ -61,8 +61,47 @@ const SOFT_TENANT_MODELS = new Set(["AuditLog"]);
 const READ_OPERATIONS = new Set(["findMany", "findFirst", "findFirstOrThrow", "findUnique", "findUniqueOrThrow", "count", "aggregate", "groupBy"]);
 const SCOPED_WRITE_OPERATIONS = new Set(["update", "updateMany", "upsert", "delete", "deleteMany"]);
 
+/**
+ * Operações cujo `where` precisa ser um `WhereUniqueInput` de verdade (não
+ * um filtro qualquer) — o Prisma exige que ele corresponda literalmente a um
+ * `@id`/`@unique`/`@@unique` existente, sem campos extras que não façam
+ * parte de algum desses. `findMany`/`count`/`updateMany`/etc. aceitam
+ * qualquer filtro solto, por isso não entram aqui.
+ */
+const UNIQUE_WHERE_OPERATIONS = new Set(["findUnique", "findUniqueOrThrow", "update", "delete", "upsert"]);
+
+/**
+ * Modelos cuja identidade de negócio é uma chave natural composta com o
+ * tenant (`@@unique([tenantId, <campo>])`) em vez de ter um campo simples
+ * que sirva de seletor único sozinho. Hoje só `Setting.key` — corrigido
+ * depois da Fase 16 (achado real: subir logo/favicon num tenant não-root
+ * falhava com "Unique constraint failed on settings_key_key", ver
+ * docs/tenancy/02-data-migration.md). Lista explícita, não uma heurística
+ * genérica por "onde não tem id": um modelo pode perfeitamente ter outro
+ * campo com `@unique` PRÓPRIO, sem nenhuma relação com tenant (ex.:
+ * `Professional.userId`) — tratar "sem id, um campo só" como sinal de
+ * chave composta quebraria esses casos (aconteceu, revertido).
+ */
+const TENANT_COMPOUND_UNIQUE_FIELD: Record<string, string> = {
+  Setting: "key",
+};
+
+/**
+ * Pra filtros soltos (`findMany`/`count`/`updateMany`/...), `{ ...where,
+ * tenantId }` sempre funciona — é só mais um `AND` na cláusula.
+ *
+ * Pra `WhereUniqueInput` de verdade, isso só funciona enquanto o modelo tem
+ * `id` como seletor (o Prisma aceita campos extras soltos ao lado de `id`,
+ * tratados como filtro adicional) — nos modelos de `TENANT_COMPOUND_UNIQUE_FIELD`,
+ * o `where` precisa virar `{ tenantId_<campo>: { tenantId, <campo> } }`, no
+ * formato de campo composto que o Prisma gera.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mergeWhereTenantId(where: any, tenantId: string): any {
+function mergeWhereTenantId(model: string, where: any, tenantId: string, isUniqueLookup: boolean): any {
+  const compoundField = TENANT_COMPOUND_UNIQUE_FIELD[model];
+  if (isUniqueLookup && compoundField && where && typeof where === "object" && compoundField in where) {
+    return { [`tenantId_${compoundField}`]: { tenantId, [compoundField]: where[compoundField] } };
+  }
   return { ...where, tenantId };
 }
 
@@ -128,10 +167,10 @@ export const tenantExtension = Prisma.defineExtension({
             ? typedArgs.data.map((d: object) => ({ ...d, tenantId }))
             : typedArgs.data;
         } else if (operation === "upsert") {
-          typedArgs.where = mergeWhereTenantId(typedArgs.where, tenantId);
+          typedArgs.where = mergeWhereTenantId(model, typedArgs.where, tenantId, true);
           typedArgs.create = injectTenantOnCreate(typedArgs.create, tenantId);
         } else if (READ_OPERATIONS.has(operation) || SCOPED_WRITE_OPERATIONS.has(operation)) {
-          typedArgs.where = mergeWhereTenantId(typedArgs.where, tenantId);
+          typedArgs.where = mergeWhereTenantId(model, typedArgs.where, tenantId, UNIQUE_WHERE_OPERATIONS.has(operation));
         }
 
         return query(typedArgs);

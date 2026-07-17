@@ -891,7 +891,7 @@ enum MediaType {
 model Setting {
   id       String  @id @default(cuid())
   tenantId String? @map("tenant_id")
-  key      String  @unique
+  key      String
   value    String  @db.Text
   type     String  @default("string") // string | number | boolean | json
 
@@ -900,6 +900,13 @@ model Setting {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // Corrigido depois da Fase 16 (achado real do usuário: subir logo/favicon
+  // num tenant não-root falhava com "Unique constraint failed on
+  // settings_key_key") — `key` sozinho era global, então qualquer chave que
+  // o tenant zeloo já tivesse (logoMediaId, name, etc.) ficava bloqueada
+  // pra todo outro tenant. Mesma classe de bug do UserRole (Fase 14). Ver
+  // docs/tenancy/02-data-migration.md.
+  @@unique([tenantId, key])
   @@index([tenantId])
   @@map("settings")
 }
