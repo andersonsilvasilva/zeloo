@@ -85,6 +85,7 @@ npx prisma migrate status      # confirma banco local em dia com as migrations
 4. **Lint continua quebrado** (pré-existente) — regressões de estilo/qualidade não são pegas automaticamente até alguém escrever um `eslint.config.js`.
 5. **Nenhum papel de "platform admin"** existe — suspender um tenant hoje só é possível direto no banco.
 6. **Backup automatizado recorrente não existe** — só o backup pontual de pré-migração. Runbook de deploy exige backup manual antes de qualquer aplicação de migration em produção.
+7. ~~`create()` com relação aninhada quebrava a injeção de `tenantId`~~ — **encontrado e corrigido depois deste relatório ter sido escrito pela primeira vez**, durante teste manual do usuário (criar Serviço com modelo de mensagem, ou Conta a Receber com cliente vinculado, falhava com `PrismaClientValidationError`). Ver `docs/tenancy/02b-query-isolation.md` §10. Fica registrado aqui como lição: **os testes automatizados desta migração não cobriam a forma dos payloads de escrita dos módulos de negócio já existentes** (só escalar vs. com relação aninhada) — vale considerar uma varredura futura por outros `create()`/`upsert()` em modelos tenant-owned que ainda não passaram por teste nenhum depois da ativação da extensão.
 
 ## 12. Ações manuais na VPS (fora do alcance desta sessão)
 

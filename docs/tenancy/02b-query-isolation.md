@@ -67,3 +67,13 @@ Confirma: isolamento de leitura, proteção contra acesso direto por ID (IDOR) e
 ## 9. Critério de conclusão
 
 Mecanismo de isolamento implementado e comprovadamente funcional (leitura, escrita, IDOR, deny-by-default) contra dados reais migrados localmente, sem regressão em nenhuma tela do app. Validação de relacionamentos cruzados e rotas administrativas ficam pra fases seguintes, registradas como pendência — não "esquecidas".
+
+## 10. Correção pós-Fase 16: `create()` com relação aninhada quebrava a injeção de `tenantId`
+
+Achado real do usuário testando manualmente em produção local (depois das 16 fases "concluídas"): criar um Serviço com "Modelo de mensagem padrão" selecionado, ou uma Conta a Receber com cliente vinculado, falhava com `PrismaClientValidationError: Unknown argument tenantId. Did you mean tenant?`.
+
+**Causa raiz**: a extensão injetava `tenantId` como escalar cru em todo `create()`. O Prisma só aceita esse formato ("Unchecked") se o resto do `data` também for só escalares — assim que QUALQUER campo do mesmo `data` usa `{ connect }` (ex.: `Service.defaultMessageTemplate`, `AccountEntry.client`/`createdBy` — vários módulos usam esse padrão), o Prisma passa a exigir o formato "Checked" pro objeto inteiro, onde `tenantId` escalar deixa de ser válido. Os testes de isolamento das Fases 4/11/14 nunca criavam registros com relação aninhada, então isso nunca apareceu.
+
+**Correção**: a extensão agora detecta o formato já em uso no `data` (algum campo com `connect`/`create`/`connectOrCreate`) e injeta `tenant: { connect }` nesse caso, ou o escalar `tenantId` caso contrário — nunca mistura os dois. Ver `injectTenantOnCreate()`/`usesRelationSyntax()` em `tenant-extension.ts`. Testado ao vivo: login, criação de serviço com template, criação de cliente, criação de conta a receber com cliente vinculado. 2 testes e2e de regressão permanentes adicionados.
+
+**Lição pra próximas fases de teste**: os testes de isolamento cobriam bem "dado cruzado entre tenants", mas não cobriam a *forma* dos payloads de escrita (escalar vs. relação aninhada) usada pelos módulos de negócio já existentes. Vale revisar se outros modelos tenant-owned têm o mesmo padrão de `create()` com relação aninhada ainda não exercitado por teste nenhum.
