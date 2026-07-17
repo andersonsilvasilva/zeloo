@@ -1,6 +1,8 @@
 # Fase 5 — Autenticação e sessões
 
 > Depende de `docs/tenancy/00-audit.md`, `01-architecture.md`, `01b-tenant-resolver.md`, `02-data-migration.md`, `02b-query-isolation.md`. Testado só localmente — **produção não foi tocada**.
+>
+> **Correção em 2026-07-17** (achada pelo usuário testando local com múltiplos hosts): `signOut({ redirectTo: "/login" })` sempre voltava pro host de `AUTH_URL` (`localhost:3000` em dev), não pro subdomínio onde o usuário estava (`flora.zeloo.net`). Ver §8.
 
 ## 1. Login por tenant (spec §29)
 
@@ -51,3 +53,13 @@ Regressão: login via `localhost` (bypass de dev) + navegação por clientes/age
 ## 6. Critério de conclusão
 
 Login valida tenant, membership e status antes de autenticar; sessão carrega e valida tenant a cada requisição; cookies já seguem o padrão seguro do spec sem mudança necessária. Todos os cenários de negação testados de verdade (não só o caminho feliz).
+
+## 7. Correção pós-fase: redirect de logout preso no host de `AUTH_URL`
+
+**Achado em 2026-07-17**, testando localmente com múltiplos hosts (`zeloo.net`, `flora.zeloo.net`, `diagro.zeloo.net` via arquivo de hosts): `signOut({ redirectTo: "/login" })` (`src/modules/auth/actions/logout.action.ts`) sempre redirecionava pro host configurado em `AUTH_URL` (`http://localhost:3000` em dev, `https://zeloo.net` em produção) — nunca pro subdomínio onde o usuário realmente estava. Deslogar em `flora.zeloo.net` jogava o navegador pra `localhost:3000/login`.
+
+**Causa**: o NextAuth resolve `redirectTo` relativo (`"/login"`) contra `baseUrl` (derivado de `AUTH_URL`) por padrão, via seu callback `redirect` embutido — que este projeto nunca sobrescrevia.
+
+**Correção**: `src/lib/auth/auth.config.ts` ganhou um callback `redirect` customizado que resolve URLs relativas contra o **host real da requisição atual** (`headers().get("host")`), não contra `baseUrl`. Funciona porque esse callback só roda no runtime Node (rota `/api/auth/[...nextauth]`), nunca no middleware Edge — `headers()` é seguro ali, mesma técnica já usada em `getCurrentTenant()`.
+
+Testado nos três hosts (`localhost`, `zeloo.net`, `diagro.zeloo.net`): login e logout permanecem no mesmo host em todos os casos, depois da correção. Regressão completa (build + navegação autenticada) sem quebra.
