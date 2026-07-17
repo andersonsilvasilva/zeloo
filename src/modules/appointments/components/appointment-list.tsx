@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useConfirm } from "@/components/shared/confirm-dialog-provider";
 import { formatCurrency } from "@/lib/utils/format";
 import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { AppointmentStatusBadge } from "@/modules/appointments/components/appointment-status-badge";
@@ -63,6 +64,7 @@ export function AppointmentList({
   timezone,
 }: AppointmentListProps) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [rowSuccess, setRowSuccess] = useState<Record<string, string>>({});
@@ -83,7 +85,13 @@ export function AppointmentList({
   }
 
   async function handleDelete(appointment: AppointmentListItem) {
-    if (!confirm(`Excluir definitivamente o agendamento de ${appointment.client.name}?`)) return;
+    const ok = await confirm({
+      title: "Excluir agendamento",
+      description: `Excluir definitivamente o agendamento de ${appointment.client.name}? Essa ação não pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     setPendingId(appointment.id);
     setRowErrors((prev) => ({ ...prev, [appointment.id]: "" }));

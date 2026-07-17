@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useConfirm } from "@/components/shared/confirm-dialog-provider";
 import { UserStatusBadge } from "@/modules/users/components/user-status-badge";
 import { UserFormDialog } from "@/modules/users/components/user-form-dialog";
 import { ChangePasswordDialog } from "@/modules/users/components/change-password-dialog";
@@ -20,13 +21,20 @@ export interface UserListProps {
 
 export function UserList({ users, options, canUpdate, canDelete, currentUserId }: UserListProps) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState<UserListItem | null>(null);
   const [changingPassword, setChangingPassword] = useState<UserListItem | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   async function handleDelete(user: UserListItem) {
-    if (!confirm(`Excluir definitivamente a conta de login de ${user.name}? O profissional/cliente vinculado e o histórico continuam intactos.`)) return;
+    const ok = await confirm({
+      title: "Excluir conta de login",
+      description: `Excluir definitivamente a conta de login de ${user.name}? O profissional/cliente vinculado e o histórico continuam intactos.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     setPendingId(user.id);
     setRowErrors((prev) => ({ ...prev, [user.id]: "" }));

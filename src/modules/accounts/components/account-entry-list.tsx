@@ -6,6 +6,7 @@ import { CheckCircle2, Trash2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
+import { useConfirm } from "@/components/shared/confirm-dialog-provider";
 import { formatCurrency } from "@/lib/utils/format";
 import { formatDateOnlyBR } from "@/lib/utils/date-only";
 import { paymentMethodValues } from "@/modules/finance/schemas/finance.schema";
@@ -34,6 +35,7 @@ export interface AccountEntryListProps {
 
 export function AccountEntryList({ direction, entries, canUpdate, canDelete }: AccountEntryListProps) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [settlingId, setSettlingId] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<(typeof paymentMethodValues)[number]>("CASH");
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -53,7 +55,12 @@ export function AccountEntryList({ direction, entries, canUpdate, canDelete }: A
   }
 
   async function handleCancel(id: string) {
-    if (!confirm("Cancelar esta conta? Ela deixa de contar como pendente, mas fica no histórico.")) return;
+    const ok = await confirm({
+      title: "Cancelar conta",
+      description: "Cancelar esta conta? Ela deixa de contar como pendente, mas fica no histórico.",
+      confirmLabel: "Cancelar conta",
+    });
+    if (!ok) return;
     setBusyId(id);
     const result = await cancelAccountEntryAction({ id, direction });
     setBusyId(null);
@@ -65,7 +72,13 @@ export function AccountEntryList({ direction, entries, canUpdate, canDelete }: A
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Excluir esta conta definitivamente?")) return;
+    const ok = await confirm({
+      title: "Excluir conta",
+      description: "Excluir esta conta definitivamente? Essa ação não pode ser desfeita.",
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
+    if (!ok) return;
     setBusyId(id);
     const result = await deleteAccountEntryAction({ id, direction });
     setBusyId(null);

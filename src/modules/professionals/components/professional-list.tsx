@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/shared/confirm-dialog-provider";
 import { ProfessionalStatusBadge } from "@/modules/professionals/components/professional-status-badge";
 import { ProfessionalFormDialog } from "@/modules/professionals/components/professional-form-dialog";
 import { deleteProfessionalAction } from "@/modules/professionals/actions/delete-professional.action";
@@ -17,12 +18,19 @@ export interface ProfessionalListProps {
 
 export function ProfessionalList({ professionals, options, canUpdate, canDelete }: ProfessionalListProps) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState<ProfessionalDetail | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   async function handleDelete(professional: ProfessionalDetail) {
-    if (!confirm(`Excluir o profissional "${professional.professionalName}"?`)) return;
+    const ok = await confirm({
+      title: "Excluir profissional",
+      description: `Excluir o profissional "${professional.professionalName}"? Essa ação não pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     setPendingId(professional.id);
     const result = await deleteProfessionalAction({ id: professional.id });

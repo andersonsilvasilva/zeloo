@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth";
 import { getSessionPermissions } from "@/lib/auth/rbac";
 import { requireCurrentTenant } from "@/lib/tenancy/current-tenant";
 import { AppShell } from "@/components/shared/app-shell";
+import { ConfirmDialogProvider } from "@/components/shared/confirm-dialog-provider";
 import { NAV_ITEMS } from "@/components/shared/nav-items";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
 
@@ -27,13 +28,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const navItems = NAV_ITEMS.filter((item) => !item.permission || permissions.has(item.permission));
 
   return (
-    <AppShell
-      navItems={navItems}
-      userName={session.user.name ?? "Usuário"}
-      userEmail={session.user.email ?? ""}
-      logoUrl={settings.logoUrl}
-    >
-      {children}
-    </AppShell>
+    <ConfirmDialogProvider>
+      <AppShell
+        navItems={navItems}
+        userName={session.user.name ?? "Usuário"}
+        userEmail={session.user.email ?? ""}
+        logoUrl={settings.logoUrl}
+      >
+        {children}
+      </AppShell>
+    </ConfirmDialogProvider>
   );
 }

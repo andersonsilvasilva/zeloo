@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/shared/confirm-dialog-provider";
 import { formatCurrency } from "@/lib/utils/format";
 import { ClientStatusBadge } from "@/modules/clients/components/client-status-badge";
 import { ClientFormDialog } from "@/modules/clients/components/client-form-dialog";
@@ -18,12 +19,19 @@ export interface ClientListProps {
 
 export function ClientList({ clients, options, canUpdate, canDelete }: ClientListProps) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState<ClientDetail | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   async function handleDelete(client: ClientDetail) {
-    if (!confirm(`Excluir o cliente "${client.name}"?`)) return;
+    const ok = await confirm({
+      title: "Excluir cliente",
+      description: `Excluir o cliente "${client.name}"? Essa ação não pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     setPendingId(client.id);
     const result = await deleteClientAction({ id: client.id });
