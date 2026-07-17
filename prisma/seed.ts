@@ -48,11 +48,17 @@ async function main() {
   });
 
   const adminRole = await prisma.role.findUniqueOrThrow({ where: { slug: ROLES.ADMIN } });
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: admin.id, roleId: adminRole.id } },
-    update: {},
-    create: { userId: admin.id, roleId: adminRole.id },
+  // upsert() não aceita null na parte tenantId de uma unique compound key
+  // (Prisma não permite lookup por compound unique com campo nulo) — este
+  // seed roda antes de qualquer Tenant existir, então fica sem tenant mesmo
+  // (a associação ao tenant "zeloo" acontece no backfill, não aqui).
+  // findFirst + create manual no lugar de upsert() por causa disso.
+  const existingAdminRole = await prisma.userRole.findFirst({
+    where: { userId: admin.id, roleId: adminRole.id, tenantId: null },
   });
+  if (!existingAdminRole) {
+    await prisma.userRole.create({ data: { userId: admin.id, roleId: adminRole.id } });
+  }
 
   console.log("Seeding default settings...");
   const defaultSettings: Array<[string, string, string]> = [
