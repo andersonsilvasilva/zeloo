@@ -5,6 +5,10 @@ public/uploads/
 *.log
 .DS_Store
 *.tsbuildinfo
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # repositório git não relacionado a este projeto, apenas coexistindo na pasta
 /barbearia/

@@ -15,7 +15,10 @@
     "prisma:seed:demo": "tsx prisma/seed-demo.ts",
     "prisma:seed:demo:appointments": "tsx prisma/seed-demo-appointments.ts",
     "tenancy:backfill": "tsx prisma/tenancy-backfill.ts",
-    "tenancy:storage-migrate": "tsx prisma/tenancy-storage-migrate.ts"
+    "tenancy:storage-migrate": "tsx prisma/tenancy-storage-migrate.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
