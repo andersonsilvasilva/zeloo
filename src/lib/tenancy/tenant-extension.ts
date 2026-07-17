@@ -109,27 +109,31 @@ function mergeWhereTenantId(model: string, where: any, tenantId: string, isUniqu
  * O Prisma gera dois formatos de input pra `create`/`upsert.create`: o
  * "Checked" (relações só via `{ connect: {...} } }`, sem nenhum FK escalar
  * direto) e o "Unchecked" (FKs como escalar, ex.: `clientId: "..."`). A
- * escolha não é por campo — é tudo-ou-nada pro objeto `data` inteiro. Se
- * QUALQUER campo do `data` já usa `{ connect }`/`{ create }`
- * (call site optou pelo formato "Checked"), injetar `tenantId` como escalar
- * quebra em runtime com "Unknown argument tenantId" (achado real na Fase 14,
- * ver `services/service.service.ts` e `accounts/services/account.service.ts`
- * — múltiplos módulos usam `{ connect }` pra client/createdBy/etc.). Por
- * isso a injeção detecta o formato já em uso e injeta `tenant: { connect }`
- * nesse caso, ou o escalar `tenantId` no formato "Unchecked" caso contrário
- * — nunca mistura os dois no mesmo objeto.
+ * escolha não é por campo — é tudo-ou-nada pro objeto `data` inteiro.
+ *
+ * Só força o formato "Checked" quando algum campo usa `{ connect }`/
+ * `{ connectOrCreate }`, OU `{ create }` apontando pra um objeto único
+ * (relação 1:1/opcional, ex.: `Service.defaultMessageTemplate`,
+ * `AccountEntry.client`) — aí sim o call site escolheu entre a forma
+ * escalar e a de relação, e optou pela de relação.
+ *
+ * `{ create: [...] }` com um ARRAY (relação 1:N, ex.:
+ * `Appointment.services`) é diferente: não existe alternativa escalar pra
+ * uma lista de filhos, então essa forma é válida tanto no "Checked" quanto
+ * no "Unchecked" — não é sinal de nada. Tratar como se fosse quebrava a
+ * criação de agendamento pelo fluxo público (`/agendar/confirmar`), que
+ * mistura `clientId`/`professionalId` escalares com `services: { create:
+ * [...] } }` no mesmo `data`. Achado real, Fase 14+.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function usesRelationSyntax(data: any): boolean {
   if (!data || typeof data !== "object") return false;
-  return Object.values(data).some(
-    (v) =>
-      v !== null &&
-      typeof v === "object" &&
-      !Array.isArray(v) &&
-      !(v instanceof Date) &&
-      ("connect" in (v as object) || "create" in (v as object) || "connectOrCreate" in (v as object)),
-  );
+  return Object.values(data).some((v) => {
+    if (v === null || typeof v !== "object" || Array.isArray(v) || v instanceof Date) return false;
+    if ("connect" in v || "connectOrCreate" in v) return true;
+    if ("create" in v && !Array.isArray((v as { create: unknown }).create)) return true;
+    return false;
+  });
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -90,16 +90,27 @@ test.describe("Isolamento de branding no /login (achado do bug reportado em prod
     await expect(page.locator("h1")).toHaveText("Zeloo.net");
   });
 
-  test("flora NÃO mostra o branding de zeloo — cai no placeholder genérico", async ({ page }) => {
+  // Não assume que flora/diagro estão "vazios" (sem settings próprias) —
+  // são tenants de teste usados pra testar de verdade a própria interface
+  // (inclusive upload de logo/favicon), então acumulam configuração real ao
+  // longo do tempo. O que importa pro isolamento é nunca mostrar a marca do
+  // ZELOO especificamente — cada um pode ter (ou não) a própria.
+  test("flora NÃO mostra o branding de zeloo", async ({ page }) => {
     await page.goto(`${FLORA}/login`);
-    await expect(page.locator("h1")).toHaveText("Zeloo");
-    await expect(page.locator("img[alt='Logomarca da barbearia']")).toHaveCount(0);
+    await expect(page.locator("h1")).not.toHaveText("Zeloo.net");
+    const logo = page.locator("img[alt='Logomarca da barbearia']");
+    if (await logo.count()) {
+      await expect(logo).not.toHaveAttribute("src", /tenants\/cmrnx6tjq0001iw0gyl4gwsuc\//);
+    }
   });
 
-  test("diagro NÃO mostra o branding de zeloo — cai no placeholder genérico", async ({ page }) => {
+  test("diagro NÃO mostra o branding de zeloo", async ({ page }) => {
     await page.goto(`${DIAGRO}/login`);
-    await expect(page.locator("h1")).toHaveText("Zeloo");
-    await expect(page.locator("img[alt='Logomarca da barbearia']")).toHaveCount(0);
+    await expect(page.locator("h1")).not.toHaveText("Zeloo.net");
+    const logo = page.locator("img[alt='Logomarca da barbearia']");
+    if (await logo.count()) {
+      await expect(logo).not.toHaveAttribute("src", /tenants\/cmrnx6tjq0001iw0gyl4gwsuc\//);
+    }
   });
 });
 
