@@ -59,7 +59,10 @@ export class ClientService {
       birthDate: input.birthDate ?? null,
       notes: input.notes || null,
       status: input.status,
-      preferredProfessional: input.preferredProfessionalId ? { connect: { id: input.preferredProfessionalId } } : undefined,
+      // FK escalar, não `{ connect }` — mesmo motivo do fix em
+      // services/service.service.ts (extensão de isolamento injeta
+      // tenantId como escalar em todo create()).
+      preferredProfessionalId: input.preferredProfessionalId || null,
     });
     return this.toListItem(client);
   }

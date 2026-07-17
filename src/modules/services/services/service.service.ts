@@ -55,9 +55,11 @@ export class ServiceService {
       durationMinutes: input.durationMinutes,
       category: input.category || null,
       status: input.status,
-      defaultMessageTemplate: input.defaultMessageTemplateId
-        ? { connect: { id: input.defaultMessageTemplateId } }
-        : undefined,
+      // FK escalar, não `{ connect }` — a extensão de isolamento injeta
+      // `tenantId` como escalar em todo create(); misturar um `connect` de
+      // relação no mesmo `data` faz o Prisma rejeitar esse `tenantId` como
+      // argumento desconhecido (achado real na Fase 14, ver tenant-extension.ts).
+      defaultMessageTemplateId: input.defaultMessageTemplateId || null,
     });
     return this.toDetail(service);
   }

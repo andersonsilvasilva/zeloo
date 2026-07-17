@@ -37,7 +37,7 @@ export class ClientRepository {
     });
   }
 
-  async create(data: Prisma.ClientCreateInput): Promise<ClientWithRelations> {
+  async create(data: Prisma.ClientUncheckedCreateInput): Promise<ClientWithRelations> {
     return this.db.client.create({ data, include: clientInclude });
   }
 

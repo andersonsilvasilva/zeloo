@@ -66,6 +66,39 @@ function mergeWhereTenantId(where: any, tenantId: string): any {
   return { ...where, tenantId };
 }
 
+/**
+ * O Prisma gera dois formatos de input pra `create`/`upsert.create`: o
+ * "Checked" (relações só via `{ connect: {...} } }`, sem nenhum FK escalar
+ * direto) e o "Unchecked" (FKs como escalar, ex.: `clientId: "..."`). A
+ * escolha não é por campo — é tudo-ou-nada pro objeto `data` inteiro. Se
+ * QUALQUER campo do `data` já usa `{ connect }`/`{ create }`
+ * (call site optou pelo formato "Checked"), injetar `tenantId` como escalar
+ * quebra em runtime com "Unknown argument tenantId" (achado real na Fase 14,
+ * ver `services/service.service.ts` e `accounts/services/account.service.ts`
+ * — múltiplos módulos usam `{ connect }` pra client/createdBy/etc.). Por
+ * isso a injeção detecta o formato já em uso e injeta `tenant: { connect }`
+ * nesse caso, ou o escalar `tenantId` no formato "Unchecked" caso contrário
+ * — nunca mistura os dois no mesmo objeto.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function usesRelationSyntax(data: any): boolean {
+  if (!data || typeof data !== "object") return false;
+  return Object.values(data).some(
+    (v) =>
+      v !== null &&
+      typeof v === "object" &&
+      !Array.isArray(v) &&
+      !(v instanceof Date) &&
+      ("connect" in (v as object) || "create" in (v as object) || "connectOrCreate" in (v as object)),
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function injectTenantOnCreate(data: any, tenantId: string): any {
+  const { tenantId: _ignored, tenant: _ignoredRelation, ...rest } = data ?? {};
+  return usesRelationSyntax(data) ? { ...rest, tenant: { connect: { id: tenantId } } } : { ...rest, tenantId };
+}
+
 export const tenantExtension = Prisma.defineExtension({
   name: "tenant-isolation",
   query: {
@@ -87,14 +120,16 @@ export const tenantExtension = Prisma.defineExtension({
         const typedArgs = (args ?? {}) as any;
 
         if (operation === "create") {
-          typedArgs.data = { ...typedArgs.data, tenantId };
+          typedArgs.data = injectTenantOnCreate(typedArgs.data, tenantId);
         } else if (operation === "createMany") {
+          // createMany não aceita relações aninhadas (só existe o input
+          // "Unchecked" pra ele) — o escalar tenantId é sempre a forma certa.
           typedArgs.data = Array.isArray(typedArgs.data)
             ? typedArgs.data.map((d: object) => ({ ...d, tenantId }))
             : typedArgs.data;
         } else if (operation === "upsert") {
           typedArgs.where = mergeWhereTenantId(typedArgs.where, tenantId);
-          typedArgs.create = { ...typedArgs.create, tenantId };
+          typedArgs.create = injectTenantOnCreate(typedArgs.create, tenantId);
         } else if (READ_OPERATIONS.has(operation) || SCOPED_WRITE_OPERATIONS.has(operation)) {
           typedArgs.where = mergeWhereTenantId(typedArgs.where, tenantId);
         }

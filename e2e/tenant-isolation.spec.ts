@@ -209,3 +209,68 @@ test.describe("Resposta controlada pra tenant inexistente/suspenso (spec §67, F
     });
   }
 });
+
+test.describe("create() com relação aninhada não quebra a injeção de tenantId (achado real, pós-Fase 14)", () => {
+  // Bug real reportado pelo usuário testando manualmente: criar um Serviço
+  // com "Modelo de mensagem padrão" selecionado (ou uma Conta a Receber com
+  // cliente vinculado) falhava com "PrismaClientValidationError: Unknown
+  // argument tenantId. Did you mean tenant?". Causa: a extensão de
+  // isolamento injetava `tenantId` como escalar cru em todo create() — o
+  // Prisma só aceita isso se o resto do `data` também for só escalares
+  // (formato "Unchecked"); assim que QUALQUER campo usa `{ connect }`
+  // (ex.: Service.defaultMessageTemplate, AccountEntry.client/createdBy),
+  // o Prisma passa a exigir o formato "Checked" pro objeto inteiro, onde um
+  // `tenantId` escalar solto não é uma propriedade válida. Corrigido em
+  // `src/lib/tenancy/tenant-extension.ts` com detecção adaptativa: usa
+  // `tenant: { connect }` quando o `data` já usa `{ connect }` em algum
+  // outro campo, escalar `tenantId` caso contrário.
+  test("cria serviço com modelo de mensagem padrão selecionado", async ({ page }) => {
+    await page.goto(`${FLORA}/login`);
+    await page.locator("#email").fill("dona.flora@teste.local");
+    await page.locator("#password").fill("FloraTeste@123");
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await page.waitForURL((url) => url.hostname === "flora.zeloo.net" && !url.pathname.startsWith("/login"), {
+      timeout: 15_000,
+    });
+
+    await page.goto(`${FLORA}/servicos`);
+    await page.getByRole("button", { name: "Novo serviço" }).click();
+    await page.locator("#name").fill("Serviço com template (regressão)");
+    await page.locator("#price").fill("1");
+    await page.locator("#durationMinutes").fill("30");
+    const templateSelect = page.locator("#defaultMessageTemplateId");
+    if ((await templateSelect.locator("option").count()) > 1) {
+      await templateSelect.selectOption({ index: 1 });
+    }
+    await page.getByRole("button", { name: "Criar serviço" }).click();
+    await page.waitForTimeout(1_500);
+    await expect(page.getByText("Não foi possível salvar o serviço.")).toHaveCount(0);
+  });
+
+  test("cria conta a receber com cliente vinculado (client + createdBy connect)", async ({ page }) => {
+    await page.goto(`${FLORA}/login`);
+    await page.locator("#email").fill("dona.flora@teste.local");
+    await page.locator("#password").fill("FloraTeste@123");
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await page.waitForURL((url) => url.hostname === "flora.zeloo.net" && !url.pathname.startsWith("/login"), {
+      timeout: 15_000,
+    });
+
+    await page.goto(`${FLORA}/clientes`);
+    await page.getByRole("button", { name: "Novo cliente" }).click();
+    await page.locator("#name").fill("Cliente Regressão Conta a Receber");
+    await page.locator("#phone").fill("11999998888");
+    await page.getByRole("button", { name: "Criar cliente" }).click();
+    await page.waitForTimeout(1_500);
+
+    await page.goto(`${FLORA}/contas-a-receber`);
+    await page.getByRole("button", { name: "Nova conta a receber" }).click();
+    await page.locator("#entry-description").fill("Conta de regressão (client connect)");
+    await page.locator("#entry-amount").fill("50");
+    await page.locator("#entry-due-date").fill("2026-08-01");
+    await page.locator("#entry-client").selectOption({ label: "Cliente Regressão Conta a Receber" });
+    await page.getByRole("button", { name: "Salvar conta" }).click();
+    await page.waitForTimeout(1_500);
+    await expect(page.getByText("Não foi possível salvar a conta.")).toHaveCount(0);
+  });
+});

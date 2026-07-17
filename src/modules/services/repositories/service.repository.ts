@@ -35,7 +35,7 @@ export class ServiceRepository {
     });
   }
 
-  async create(data: Prisma.ServiceCreateInput): Promise<ServiceWithRelations> {
+  async create(data: Prisma.ServiceUncheckedCreateInput): Promise<ServiceWithRelations> {
     return this.db.service.create({ data, include: serviceInclude });
   }
 
