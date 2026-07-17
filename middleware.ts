@@ -44,6 +44,21 @@ export function middleware(request: NextRequest) {
   const centralDomains = parseCentralDomains(process.env.CENTRAL_DOMAINS);
   const rootTenantSlug = process.env.ROOT_TENANT_SLUG ?? "";
 
+  // Feature flag de ativação (Fase 13, spec §64). Desligada (padrão em
+  // produção até o DNS/SSL wildcard da Fase 12 estarem prontos e
+  // validados): ignora o hostname por completo, todo tráfego opera como o
+  // tenant raiz configurado — permite implantar o código multi-tenant
+  // pronto sem depender de infraestrutura ainda não existente, e sem abrir
+  // acesso multi-tenant real antes da hora. Nunca usa `DEFAULT_TENANT_SLUG`
+  // aqui (esse é só pro backfill/migração, spec §14) — exige
+  // `ROOT_TENANT_SLUG` explícito, sem fallback silencioso.
+  if (process.env.MULTITENANCY_ENABLED !== "true") {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set(TENANT_CONTEXT_HEADER, "root");
+    requestHeaders.set(TENANT_SLUG_HEADER, rootTenantSlug);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   const host = resolveRequestHost(request.headers.get("host"), request.headers.get("x-forwarded-host"), trustProxy);
 
   if (!baseDomain) {
