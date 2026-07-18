@@ -21,12 +21,15 @@ export function TenantList({ tenants, baseDomain }: { tenants: TenantListItem[];
 
   async function handleChangeStatus(tenant: TenantListItem, status: "ACTIVE" | "SUSPENDED") {
     const isSuspending = status === "SUSPENDED";
+    const isPromotingFromTrial = status === "ACTIVE" && tenant.status === "TRIAL";
     const ok = await confirm({
-      title: isSuspending ? "Suspender tenant" : "Reativar tenant",
+      title: isSuspending ? "Suspender tenant" : isPromotingFromTrial ? "Ativar tenant" : "Reativar tenant",
       description: isSuspending
         ? `Suspender "${tenant.name}"? Ninguém consegue acessar o painel desse negócio (${tenant.slug}.${baseDomain}) enquanto estiver suspenso — os dados continuam intactos.`
-        : `Reativar "${tenant.name}"? O acesso ao painel volta a funcionar normalmente.`,
-      confirmLabel: isSuspending ? "Suspender" : "Reativar",
+        : isPromotingFromTrial
+          ? `Ativar "${tenant.name}"? Sai do período de trial e passa pro status Ativo definitivo.`
+          : `Reativar "${tenant.name}"? O acesso ao painel volta a funcionar normalmente.`,
+      confirmLabel: isSuspending ? "Suspender" : isPromotingFromTrial ? "Ativar" : "Reativar",
       variant: isSuspending ? "danger" : "default",
     });
     if (!ok) return;
@@ -75,16 +78,7 @@ export function TenantList({ tenants, baseDomain }: { tenants: TenantListItem[];
 
             {!tenant.isRoot && (
               <div className="flex flex-wrap gap-2">
-                {tenant.status !== "SUSPENDED" ? (
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    disabled={busyId === tenant.id}
-                    onClick={() => handleChangeStatus(tenant, "SUSPENDED")}
-                  >
-                    Suspender
-                  </Button>
-                ) : (
+                {tenant.status === "SUSPENDED" && (
                   <Button
                     variant="secondary"
                     size="sm"
@@ -92,6 +86,36 @@ export function TenantList({ tenants, baseDomain }: { tenants: TenantListItem[];
                     onClick={() => handleChangeStatus(tenant, "ACTIVE")}
                   >
                     Reativar
+                  </Button>
+                )}
+                {tenant.status === "CANCELLED" && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={busyId === tenant.id}
+                    onClick={() => handleChangeStatus(tenant, "ACTIVE")}
+                  >
+                    Reativar
+                  </Button>
+                )}
+                {tenant.status === "TRIAL" && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={busyId === tenant.id}
+                    onClick={() => handleChangeStatus(tenant, "ACTIVE")}
+                  >
+                    Ativar
+                  </Button>
+                )}
+                {(tenant.status === "TRIAL" || tenant.status === "ACTIVE") && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    disabled={busyId === tenant.id}
+                    onClick={() => handleChangeStatus(tenant, "SUSPENDED")}
+                  >
+                    Suspender
                   </Button>
                 )}
               </div>
