@@ -21,6 +21,7 @@ Aplicação web full-stack SaaS para gestão operacional, financeira e comercial
 [![Node.js](https://img.shields.io/badge/node-%3E%3D20-339933?style=flat-square&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
 [![Deploy](https://img.shields.io/badge/deploy-VPS_(PM2_%2B_Nginx)-673DE6?style=flat-square&logo=linux&logoColor=white)](#-deploy-em-produção)
 [![Status](https://img.shields.io/badge/status-em_produção-success?style=flat-square)](https://zeloo.net)
+[![Versão](https://img.shields.io/badge/versão-2.0_multi--tenant-blueviolet?style=flat-square)](#-multi-tenant-como-funciona)
 [![License](https://img.shields.io/badge/license-privado-red?style=flat-square)](#-licença)
 
 </div>
@@ -73,7 +74,7 @@ Cada negócio cadastrado (**tenant**) é isolado dos demais em todos os níveis 
 - **Arquivos enviados** (logo, fotos de profissionais/clientes) ficam segregados por tenant no armazenamento (`tenants/{id}/...`), assim como configurações de marca (nome, logomarca, favicon, cores) — cada negócio vê e edita só a própria identidade visual.
 - **Onboarding de negócio novo é transacional e idempotente**: cria o tenant, o usuário proprietário, o vínculo e a assinatura em teste numa única operação.
 
-**Status de implantação**: a arquitetura multi-tenant está implementada, documentada fase a fase (14 documentos técnicos + relatório final em [`docs/tenancy/`](docs/tenancy/)) e coberta por 42 testes automatizados — mas em produção hoje o sistema serve apenas o tenant original no domínio raiz (`zeloo.net`). A ativação de subdomínios reais depende de infraestrutura de DNS/SSL wildcard ainda não configurada e é controlada por uma variável de ambiente (`MULTITENANCY_ENABLED`) justamente para permitir esse deploy em duas etapas sem risco. Ver [`docs/tenancy/FINAL-REPORT.md`](docs/tenancy/FINAL-REPORT.md) para o estado exato, riscos remanescentes e o passo a passo de ativação.
+**Status de implantação (v2.0)**: a arquitetura multi-tenant está implementada, documentada fase a fase (14 documentos técnicos + relatório final em [`docs/tenancy/`](docs/tenancy/)), coberta por 42 testes automatizados e **ativa em produção** — `MULTITENANCY_ENABLED=true`, resolução real por subdomínio ligada. O tenant original segue no domínio raiz (`zeloo.net`) sem qualquer mudança de comportamento; o primeiro subdomínio de negócio novo (`cezarios.zeloo.net`) já foi provisionado como piloto (SSL + Nginx via [`deploy/provisionar-subdominio.sh`](deploy/provisionar-subdominio.sh), rodado manualmente por um humano na VPS — de propósito não exposto pela aplicação web). Como ainda não há DNS/SSL wildcard, novos subdomínios continuam sendo provisionados um a um com esse script até que valha a pena automatizar isso. A tela **Tenants** (`/plataforma/tenants`, restrita ao tenant raiz) permite cadastrar negócios novos e promover/suspender/reativar cada um; um tenant suspenso ou cancelado vê uma página informativa (`/tenant-indisponivel`) em vez do painel. Ver [`docs/tenancy/FINAL-REPORT.md`](docs/tenancy/FINAL-REPORT.md) para o histórico completo e riscos remanescentes.
 
 ---
 
@@ -268,7 +269,7 @@ Prioridades pendentes fora do escopo de tenancy: CRUD de cliente/profissional/se
 
 ## 📦 Deploy em produção
 
-Aplicação em produção em **https://zeloo.net**, rodando como **Node.js standalone** numa VPS própria (Ubuntu 22.04), gerenciada pelo **PM2** e exposta atrás de **Nginx** como reverse proxy (porta 80/443 → `127.0.0.1:3000`), com SSL via Certbot/Let's Encrypt. MySQL 8 roda localmente na mesma VPS. Migrado da hospedagem compartilhada (Hostinger/Passenger) em 2026-07-13/14. **Hoje a produção serve só o tenant raiz** — o runbook de ativação multi-tenant (DNS wildcard, SSL wildcard, migrations, backfill) está em [`docs/tenancy/11-deployment-runbook.md`](docs/tenancy/11-deployment-runbook.md), ainda não executado.
+Aplicação em produção em **https://zeloo.net**, rodando como **Node.js standalone** numa VPS própria (Ubuntu 22.04), gerenciada pelo **PM2** e exposta atrás de **Nginx** como reverse proxy (porta 80/443 → `127.0.0.1:3000`), com SSL via Certbot/Let's Encrypt. MySQL 8 roda localmente na mesma VPS. Migrado da hospedagem compartilhada (Hostinger/Passenger) em 2026-07-13/14. **Multi-tenant ativo em produção desde 2026-07-18** (`MULTITENANCY_ENABLED=true`) — runbook completo em [`docs/tenancy/11-deployment-runbook.md`](docs/tenancy/11-deployment-runbook.md), já executado (migrations + backfill + storage migrate rodados contra o banco real). Provisionamento de subdomínio novo (SSL + Nginx) segue manual, um a um, via [`deploy/provisionar-subdominio.sh`](deploy/provisionar-subdominio.sh) — não há DNS/SSL wildcard configurado ainda.
 
 O deploy é **manual** (build local + upload), não automatizado via Git — o diretório da aplicação na VPS **não é um clone git**:
 
@@ -334,9 +335,10 @@ prisma/
 
 ## 🗺️ Roadmap
 
-- [ ] Ativar multi-tenant em produção: DNS wildcard, certificado SSL wildcard, atualizar Nginx, rodar o runbook de deploy (ver [`docs/tenancy/FINAL-REPORT.md`](docs/tenancy/FINAL-REPORT.md) pro passo a passo exato e os riscos remanescentes)
-- [ ] Restringir `tenant_id` como obrigatório (hoje nullable de propósito, ver `docs/tenancy/02-data-migration.md`) depois de validar a Fase de ativação em produção
-- [ ] Papel de "platform admin" (gestão de todos os tenants, hoje só possível direto no banco)
+- [x] Ativar multi-tenant em produção (`MULTITENANCY_ENABLED=true`, runbook executado, piloto real em `cezarios.zeloo.net`) — 2026-07-18
+- [ ] DNS/SSL wildcard (`*.zeloo.net`) pra parar de provisionar subdomínio um a um via script manual
+- [ ] Restringir `tenant_id` como obrigatório (hoje nullable de propósito, ver `docs/tenancy/02-data-migration.md`) agora que a ativação em produção foi validada
+- [x] Tela de gestão de tenants (`/plataforma/tenants`) — cadastro, promoção de trial, suspensão/reativação, restrita ao tenant raiz
 - [ ] Configurar `eslint.config.js` (ESLint 9 instalado, projeto ainda não migrou do formato antigo — `npm run lint` não funciona hoje)
 - [ ] Cancelamento/consulta de agendamento pelo próprio cliente via `/agendar` (link "Ver/cancelar agendamento")
 - [ ] Migração de armazenamento local para S3/R2 (interface `StorageProvider` já preparada, prefixo por tenant já embutido)
