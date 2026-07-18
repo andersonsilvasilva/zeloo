@@ -144,14 +144,15 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
 
     // "Criar configurações padrão" (spec §43 passo 6) fica pra quando o
     // tenant acessar Configurações pela primeira vez — não pra cá.
-    // `Setting.key` ainda é @unique GLOBAL (Etapa C, que fixaria pra
-    // @@unique([tenantId, key]), foi deliberadamente adiada — ver
-    // docs/tenancy/02-data-migration.md §6). Criar uma linha
-    // "barbershop.name" pra este tenant colidiria com a do tenant `zeloo`
-    // (já existe). `SettingsService.getGeneralSettings()` já trata ausência
-    // de qualquer chave com fallback vazio/padrão (`DEFAULT_TIMEZONE` etc.)
-    // — um tenant novo só vê campos em branco até preencher Configurações,
-    // comportamento aceitável e sem risco de colisão.
+    // `Setting.key` já é @@unique([tenantId, key]) (corrigido depois da
+    // Fase 16 — achado real: um tenant não-root não conseguia salvar
+    // NENHUMA configuração que o zeloo já tivesse, ver
+    // docs/tenancy/02-data-migration.md §6), então não haveria mais risco
+    // de colisão se quiséssemos pré-criar linhas aqui — mas continua sem
+    // necessidade: `SettingsService.getGeneralSettings()` já trata ausência
+    // de qualquer chave com fallback vazio/padrão (`DEFAULT_TIMEZONE` etc.),
+    // então um tenant novo só vê campos em branco até preencher
+    // Configurações, o que já é o comportamento esperado.
 
     await tx.subscription.create({
       data: { tenantId: tenant.id, planId: trialPlan.id, status: "TRIALING" },
