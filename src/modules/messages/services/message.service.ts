@@ -152,8 +152,11 @@ export class MessageService {
       const to = client.whatsapp || client.phone;
       if (!to) throw new ClientPhoneMissingError();
 
-      // Variáveis {{1}}..{{5}} do template "confirmacao_agendamento" — só
-      // fazem sentido quando há um agendamento vinculado ao envio.
+      // Variáveis {{1}}..{{7}} do template "confirmacao_agendamento" — só
+      // fazem sentido quando há um agendamento vinculado ao envio. {{6}}/{{7}}
+      // (endereço/telefone) exigem que o template aprovado na Meta seja
+      // atualizado pra incluí-las no corpo — ver instruções em
+      // project_whatsapp_template (memória) sobre como editar no Business Manager.
       let parameters: string[] | undefined;
       if (appointment && settings) {
         parameters = [
@@ -162,6 +165,8 @@ export class MessageService {
           formatInBarbershopTz(appointment.startTime, settings.timezone, "dd/MM/yyyy 'às' HH:mm"),
           appointment.professional.professionalName,
           appointment.services.map((s) => s.service.name).join(", "),
+          settings.address || "—",
+          settings.phone || settings.whatsapp || "—",
         ];
       }
 
