@@ -124,18 +124,22 @@ async function main() {
 
   console.log("Seeding serviços...");
   for (const s of SERVICES) {
-    await prisma.service.upsert({
-      where: { slug: s.slug },
-      update: {},
-      create: {
-        name: s.name,
-        slug: s.slug,
-        price: s.price,
-        durationMinutes: s.durationMinutes,
-        category: s.category,
-        status: "ACTIVE",
-      },
-    });
+    // upsert() não aceita null na parte tenantId de uma unique compound key —
+    // mesmo motivo/correção de prisma/seed.ts (Service.slug virou
+    // @@unique([tenantId, slug])).
+    const existingService = await prisma.service.findFirst({ where: { slug: s.slug, tenantId: null } });
+    if (!existingService) {
+      await prisma.service.create({
+        data: {
+          name: s.name,
+          slug: s.slug,
+          price: s.price,
+          durationMinutes: s.durationMinutes,
+          category: s.category,
+          status: "ACTIVE",
+        },
+      });
+    }
   }
 
   console.log("Seeding clientes...");

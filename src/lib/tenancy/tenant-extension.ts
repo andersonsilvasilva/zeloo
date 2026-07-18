@@ -73,17 +73,21 @@ const UNIQUE_WHERE_OPERATIONS = new Set(["findUnique", "findUniqueOrThrow", "upd
 /**
  * Modelos cuja identidade de negócio é uma chave natural composta com o
  * tenant (`@@unique([tenantId, <campo>])`) em vez de ter um campo simples
- * que sirva de seletor único sozinho. Hoje só `Setting.key` — corrigido
- * depois da Fase 16 (achado real: subir logo/favicon num tenant não-root
- * falhava com "Unique constraint failed on settings_key_key", ver
- * docs/tenancy/02-data-migration.md). Lista explícita, não uma heurística
- * genérica por "onde não tem id": um modelo pode perfeitamente ter outro
- * campo com `@unique` PRÓPRIO, sem nenhuma relação com tenant (ex.:
+ * que sirva de seletor único sozinho. `Setting.key` — corrigido depois da
+ * Fase 16 (achado real: subir logo/favicon num tenant não-root falhava com
+ * "Unique constraint failed on settings_key_key", ver
+ * docs/tenancy/02-data-migration.md). `Service.slug` — mesmo padrão, achado
+ * em produção depois do Release B (tenant novo não conseguia cadastrar
+ * serviço com nome já usado por outro tenant, "Unique constraint failed on
+ * services_slug_key"). Lista explícita, não uma heurística genérica por
+ * "onde não tem id": um modelo pode perfeitamente ter outro campo com
+ * `@unique` PRÓPRIO, sem nenhuma relação com tenant (ex.:
  * `Professional.userId`) — tratar "sem id, um campo só" como sinal de
  * chave composta quebraria esses casos (aconteceu, revertido).
  */
 const TENANT_COMPOUND_UNIQUE_FIELD: Record<string, string> = {
   Setting: "key",
+  Service: "slug",
 };
 
 /**

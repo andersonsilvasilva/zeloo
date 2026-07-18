@@ -400,14 +400,15 @@ enum ProfessionalStatus {
 // SERVIÇOS
 // ----------------------------------------------------------------------------
 
-// slug continua @unique global nesta fase (nullable tenantId ainda não
-// permite compor a unique com segurança pra registros sem tenant) — vira
-// @@unique([tenantId, slug]) na Etapa C, depois do backfill.
+// slug era @unique global (mesma classe de bug do Setting.key/UserRole,
+// achada em produção: tenant novo não conseguia cadastrar serviço com nome
+// já usado por outro tenant, ex. "Corte Masculino") — corrigido pra
+// composta com tenantId, ver TENANT_COMPOUND_UNIQUE_FIELD em tenant-extension.ts.
 model Service {
   id                       String        @id @default(cuid())
   tenantId                 String?       @map("tenant_id")
   name                     String
-  slug                     String        @unique
+  slug                     String
   shortDescription         String?       @map("short_description")
   description              String?       @db.Text
   price                    Decimal       @db.Decimal(12, 2)
@@ -426,6 +427,7 @@ model Service {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@unique([tenantId, slug])
   @@index([status])
   @@index([category])
   @@index([tenantId])

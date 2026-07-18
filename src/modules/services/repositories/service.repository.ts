@@ -18,7 +18,13 @@ export class ServiceRepository {
   }
 
   async findBySlug(slug: string) {
-    return this.db.service.findUnique({ where: { slug }, select: { id: true } });
+    // `where: { slug }` sozinho não corresponde mais a nenhum unique do
+    // Prisma -- `Service.slug` virou @@unique([tenantId, slug]). O cast é
+    // seguro aqui porque quem resolve o `where` de verdade, em runtime, é a
+    // extensão de isolamento (tenant-extension.ts), que reescreve isso pra
+    // `{ tenantId_slug: { tenantId, slug } }` antes da query chegar no
+    // Prisma de fato -- o tipo gerado não tem como saber disso estaticamente.
+    return this.db.service.findUnique({ where: { slug } as Prisma.ServiceWhereUniqueInput, select: { id: true } });
   }
 
   async list(filters: { search?: string; status?: ServiceStatus; category?: string }) {
