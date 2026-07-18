@@ -58,9 +58,9 @@ Causa raiz: `UserRole` ganhou a coluna `tenantId` na Fase 3 (Etapa A), mas a con
 | WebSockets estão isolados | N/A | App não usa WebSocket |
 | Cookies e tokens vinculados ao tenant correto | ✅ | Verificado ao vivo nesta fase — cookie de sessão é `domain: "flora.zeloo.net"` (host-only, sem `Domain=.zeloo.net`), `httpOnly`, `sameSite=Lax` |
 | Host e proxy headers são validados | ✅ | `hostname.test.ts` (ataques de sufixo), `TRUST_PROXY` (Fase 12/13) |
-| Platform admin e tenant admin são papéis distintos | ❌ | Ver abaixo |
+| Platform admin e tenant admin são papéis distintos | ⚠️ parcial | Ver abaixo |
 
-**Platform admin — não implementado, gap real**: hoje só existe RBAC por tenant (`Role.ADMIN` é o dono/administrador *daquele* tenant, via `UserRole.tenantId`). Não existe nenhum papel/rota/UI de administração da plataforma como um todo (ex.: listar/suspender qualquer tenant, ver métricas agregadas). `Tenant.status = SUSPENDED` já bloqueia acesso na prática (§2.1), mas só é setável direto no banco — não há fluxo de app pra isso (já registrado assim na Fase 10, `08-observability.md`, item "tenant_suspended: ❌"). Ferramental de platform admin é um projeto à parte, fora do escopo desta migração — registrado aqui como pendência honesta, não como feito.
+**Platform admin — atualizado (véspera do deploy, 2026-07-18)**: continua **não existindo um papel RBAC próprio** de platform admin (`RolePermission` é global — dar `platform.manageTenants` ao papel ADMIN concede a mesma permissão ao ADMIN de QUALQUER tenant, não só o raiz). A barreira real hoje é `requireRootTenant()` (`src/lib/tenancy/current-tenant.ts`): a tela `/plataforma/tenants` (cadastro, checagem de slug em tempo real, suspender/reativar) retorna 404 pra qualquer tenant que não seja o raiz, testado ao vivo com a dona da Flora (ADMIN do próprio tenant) recebendo 404 e sem o item de menu. Isso fecha a lacuna prática (dá pra criar/suspender tenant pela UI agora, não só via script) mas não é a solução arquitetural correta — um papel de plataforma de verdade (não amarrado a "ser o tenant raiz") continua sendo trabalho futuro. `tenant_suspended`/`tenant_reactivated` agora têm cobertura de auditoria real (fechando o item que a Fase 10 tinha deixado como "❌"), gravados no `AuditLog` do tenant afetado (não do tenant de quem executou a ação).
 
 ## 4. Qualidade (spec §70)
 

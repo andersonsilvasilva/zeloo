@@ -1,8 +1,8 @@
 import "server-only";
-import { PrismaClient } from "@prisma/client";
 import { addDays } from "date-fns";
 import { hashPassword } from "@/lib/auth/password";
 import { ROLES } from "@/lib/auth/permissions";
+import { rawPrisma } from "@/lib/tenancy/raw-prisma";
 import { tenantSlugSchema } from "@/modules/tenancy/schemas/tenant.schema";
 import { DEFAULT_TIMEZONE } from "@/modules/settings/schemas/settings.schema";
 
@@ -20,10 +20,6 @@ import { DEFAULT_TIMEZONE } from "@/modules/settings/schemas/settings.schema";
  * (conexões diferentes), então é tudo cru, com `tenantId` setado
  * manualmente em cada linha.
  */
-
-const globalForRawPrisma = globalThis as unknown as { rawPrismaForOnboarding?: PrismaClient };
-const rawPrisma = globalForRawPrisma.rawPrismaForOnboarding ?? new PrismaClient();
-if (process.env.NODE_ENV !== "production") globalForRawPrisma.rawPrismaForOnboarding = rawPrisma;
 
 const TRIAL_PLAN_SLUG = "trial";
 const TRIAL_DAYS = 30;
@@ -180,4 +176,74 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
     alreadyProvisioned: false,
     url,
   };
+}
+
+export class TenantNotFoundError extends Error {
+  constructor() {
+    super("Tenant não encontrado.");
+    this.name = "TenantNotFoundError";
+  }
+}
+
+export class CannotChangeRootTenantStatusError extends Error {
+  constructor() {
+    super("O tenant raiz não pode ser suspenso/cancelado por aqui — isso derrubaria o próprio painel de administração.");
+    this.name = "CannotChangeRootTenantStatusError";
+  }
+}
+
+/**
+ * Muda o status de um tenant (suspender/reativar/cancelar) — spec §49,
+ * "tenant_suspended" era a única ação crítica sem cobertura de auditoria
+ * até aqui (ver docs/tenancy/08-observability.md item 4). Usa o client cru
+ * pelo mesmo motivo de `provisionTenant()`: o admin que aciona isso está
+ * logado no tenant raiz, então a extensão de isolamento gravaria o
+ * `AuditLog` como pertencente ao tenant raiz (sobrescreve `tenantId` sempre
+ * pelo da requisição atual) — errado aqui, o log tem que pertencer ao
+ * tenant que está sendo alterado, não a quem alterou.
+ */
+export async function updateTenantStatus(
+  tenantId: string,
+  status: "TRIAL" | "ACTIVE" | "SUSPENDED" | "CANCELLED",
+  actingUserId: string,
+): Promise<{ id: string; slug: string; status: string }> {
+  const tenant = await rawPrisma.tenant.findUnique({ where: { id: tenantId } });
+  if (!tenant) throw new TenantNotFoundError();
+  if (tenant.slug === (process.env.ROOT_TENANT_SLUG ?? "")) throw new CannotChangeRootTenantStatusError();
+
+  const previousStatus = tenant.status;
+
+  // "Reativar" (pedido como ACTIVE) num tenant SUSPENDED restaura o status
+  // de ANTES da suspensão (ex.: TRIAL), não promove direto pra ACTIVE — achado
+  // real testando: suspender e reativar um tenant em TRIAL virava ACTIVE
+  // silenciosamente, perdendo a distinção. A fonte da verdade é o próprio
+  // AuditLog de "tenant_suspended" já gravado (oldValues.status).
+  let targetStatus = status;
+  if (status === "ACTIVE" && previousStatus === "SUSPENDED") {
+    const lastSuspension = await rawPrisma.auditLog.findFirst({
+      where: { entity: "Tenant", entityId: tenantId, action: "tenant_suspended" },
+      orderBy: { createdAt: "desc" },
+    });
+    const restoredStatus = (lastSuspension?.oldValues as { status?: string } | null)?.status;
+    if (restoredStatus === "TRIAL" || restoredStatus === "ACTIVE") {
+      targetStatus = restoredStatus;
+    }
+  }
+
+  const updated = await rawPrisma.tenant.update({ where: { id: tenantId }, data: { status: targetStatus } });
+
+  const action = status === "SUSPENDED" ? "tenant_suspended" : status === "ACTIVE" ? "tenant_reactivated" : status === "CANCELLED" ? "tenant_cancelled" : "tenant_status_changed";
+  await rawPrisma.auditLog.create({
+    data: {
+      tenantId: updated.id,
+      userId: actingUserId,
+      action,
+      entity: "Tenant",
+      entityId: updated.id,
+      oldValues: { status: previousStatus },
+      newValues: { status: updated.status },
+    },
+  });
+
+  return { id: updated.id, slug: updated.slug, status: updated.status };
 }

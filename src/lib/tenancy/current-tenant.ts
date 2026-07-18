@@ -54,3 +54,19 @@ export async function requireCurrentTenant() {
 
   return tenant;
 }
+
+/**
+ * Guarda pra páginas/actions de nível plataforma (hoje só cadastro de
+ * tenant novo) — não existe papel "platform admin" distinto de "tenant
+ * admin" ainda (gap conhecido, ver docs/tenancy/13-acceptance-criteria.md):
+ * `RolePermission` é global, então uma permissão sozinha marcaria QUALQUER
+ * ADMIN de QUALQUER tenant. Até essa lacuna ser resolvida de verdade
+ * (papel de plataforma próprio), a defesa real é restringir por completo
+ * ao tenant raiz (`ROOT_TENANT_SLUG`) — 404 pra qualquer outro tenant,
+ * mesmo que o usuário tenha a permissão.
+ */
+export async function requireRootTenant() {
+  const tenant = await requireCurrentTenant();
+  if (tenant.slug !== (process.env.ROOT_TENANT_SLUG ?? "")) notFound();
+  return tenant;
+}

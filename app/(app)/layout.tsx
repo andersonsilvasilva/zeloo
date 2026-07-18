@@ -25,7 +25,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const [permissions, settings] = await Promise.all([getSessionPermissions(), getGeneralSettingsAction()]);
-  const navItems = NAV_ITEMS.filter((item) => !item.permission || permissions.has(item.permission));
+  const isRootTenant = currentTenant.slug === (process.env.ROOT_TENANT_SLUG ?? "");
+  const navItems = NAV_ITEMS.filter(
+    (item) => (!item.permission || permissions.has(item.permission)) && (!item.rootOnly || isRootTenant),
+  );
 
   return (
     <ConfirmDialogProvider>

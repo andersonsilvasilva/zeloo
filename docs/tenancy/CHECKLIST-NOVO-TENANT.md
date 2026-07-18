@@ -1,10 +1,16 @@
 # Checklist — criar um tenant (negócio) novo
 
-> Roteiro de toda vez que um negócio novo entrar na plataforma. **Hoje não existe uma tela de admin pra fazer isso com segurança** — só um script direto no banco (via `provisionTenant()`) ou a rota de diagnóstico `app/api/tenant-debug` (sem autenticação, nunca deve existir em produção). Isso é uma lacuna real, sinalizada no item 0 abaixo, não um passo a passo de uma feature pronta.
+> Roteiro de toda vez que um negócio novo entrar na plataforma. **Atualizado em 2026-07-18**: agora existe uma tela de admin de verdade — `/plataforma/tenants`, só acessível pelo login administrador do tenant raiz (zeloo). A rota de diagnóstico `app/api/tenant-debug` continua existindo só pra dev local e agora é bloqueada automaticamente em produção (`NODE_ENV=production` → 404).
 
-## 0. Antes de tudo: como isso é feito hoje (gap conhecido)
+## 0. Como isso é feito hoje
 
-Não existe UI de "criar novo negócio" nem rota autenticada pra isso — só `provisionTenant()` (`src/modules/tenancy/services/tenant-onboarding.service.ts`), chamada hoje só pela rota de diagnóstico `POST /api/tenant-debug`, que é **sem autenticação** e não pode existir em produção. Até esse gap ser resolvido (uma tela de admin de verdade, ou pelo menos uma rota autenticada só pra platform admin — que também não existe, ver `13-acceptance-criteria.md`), criar um tenant novo em produção significa rodar um script one-off no servidor chamando `provisionTenant()` diretamente, por alguém com acesso à VPS. Isso é aceitável pro volume de hoje (poucos tenants, criados manualmente), mas não escala — vale priorizar essa tela antes de qualquer expansão comercial real.
+Logado como administrador do tenant raiz (zeloo), acessar `/plataforma/tenants` (aparece no menu lateral só nesse tenant). De lá dá pra:
+
+- **Criar um tenant novo** — formulário com checagem de slug em tempo real (mostra na hora se já está em uso ou se é uma palavra reservada, antes de tentar salvar).
+- **Ver todos os tenants cadastrados** — nome, subdomínio, dono, status, data de criação.
+- **Suspender/reativar** um tenant existente — suspender bloqueia o acesso ao painel daquele negócio imediatamente (`/tenant-indisponivel`, com link de WhatsApp pro suporte já identificando qual negócio está suspenso); reativar restaura o status de antes da suspensão (não promove automaticamente pra `ACTIVE` se o tenant estava em `TRIAL`).
+
+**Gap que continua real** (ver `13-acceptance-criteria.md`): a barreira de acesso é "ser o tenant raiz", não um papel de plataforma de verdade — não existe ainda uma conta "só platform admin, sem ser dona de nenhum negócio". Suficiente pro volume de hoje (operação única), mas vale revisar antes de qualquer expansão com mais de um administrador de plataforma.
 
 ## 1. Decisões antes de provisionar
 

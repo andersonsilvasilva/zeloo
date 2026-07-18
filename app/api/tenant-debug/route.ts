@@ -9,9 +9,25 @@ import { provisionTenant } from "@/modules/tenancy/services/tenant-onboarding.se
  * do isolamento: lista clientes usando o Prisma Client normal da app (já
  * com `tenantExtension` aplicada) — só deve aparecer o que pertence ao
  * tenant resolvido, nunca de outro. Só pra verificação local; **sem
- * autenticação — não deployar em produção sem gate antes**.
+ * autenticação**.
+ *
+ * Gate adicionado antes do deploy Release A (docs/tenancy/CHECKLIST-DEPLOY.md
+ * item 0): em produção (`NODE_ENV=production`) a rota inteira responde 404,
+ * como se não existisse — sem isso, qualquer um poderia listar amostra de
+ * dados e disparar o probe de IDOR contra produção sem autenticação nenhuma.
+ * Continua disponível em dev/local pra diagnóstico.
  */
+function blockInProduction(): NextResponse | null {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
+  const blocked = blockInProduction();
+  if (blocked) return blocked;
+
   const context = getCurrentTenantContext();
   const slug = getCurrentTenantSlug();
   const tenant = await getCurrentTenant();
@@ -58,6 +74,9 @@ export async function GET(request: Request) {
  * body: { tenantName, slug, ownerName, ownerEmail, ownerPassword }
  */
 export async function POST(request: Request) {
+  const blocked = blockInProduction();
+  if (blocked) return blocked;
+
   const body = await request.json();
   try {
     const result = await provisionTenant(body);

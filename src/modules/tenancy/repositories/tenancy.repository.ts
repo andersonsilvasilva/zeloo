@@ -12,6 +12,20 @@ export class TenancyRepository {
     return this.db.tenant.findUnique({ where: { id } });
   }
 
+  /** Todos os tenants + o membro mais antigo (proprietário, na prática) de cada um — tela de plataforma. */
+  async listAllWithOwner() {
+    return this.db.tenant.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        members: {
+          orderBy: { createdAt: "asc" },
+          take: 1,
+          include: { user: { select: { name: true, email: true } } },
+        },
+      },
+    });
+  }
+
   async slugExists(slug: string): Promise<boolean> {
     const count = await this.db.tenant.count({ where: { slug } });
     return count > 0;

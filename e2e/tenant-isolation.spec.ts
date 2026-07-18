@@ -283,5 +283,62 @@ test.describe("create() com relação aninhada não quebra a injeção de tenant
     await page.getByRole("button", { name: "Salvar conta" }).click();
     await page.waitForTimeout(1_500);
     await expect(page.getByText("Não foi possível salvar a conta.")).toHaveCount(0);
+
+    // Limpeza — sem isso, cada execução da suíte deixa um cliente novo pra
+    // trás, poluindo a amostra de outros testes (achado real: "flora só
+    // enxerga os próprios clientes" começou a falhar depois de várias
+    // execuções, porque os 5 primeiros da amostra viravam só duplicatas
+    // deste cliente de teste, empurrando a fixture de fora).
+    await page.goto(`${FLORA}/clientes`);
+    const clientRow = page.locator("div.rounded-xl", { hasText: "Cliente Regressão Conta a Receber" }).first();
+    await clientRow.getByRole("button", { name: "Excluir" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Excluir" }).click();
+    await page.waitForTimeout(1_000);
+  });
+});
+
+test.describe("Tela de plataforma /plataforma/tenants — só existe no tenant raiz (Fase pré-deploy)", () => {
+  test("item de menu e página só aparecem pro admin do zeloo, nunca de outro tenant", async ({ page }) => {
+    await page.goto(`${FLORA}/login`);
+    await page.locator("#email").fill("dona.flora@teste.local");
+    await page.locator("#password").fill("FloraTeste@123");
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await page.waitForURL((url) => url.hostname === "flora.zeloo.net" && !url.pathname.startsWith("/login"), {
+      timeout: 15_000,
+    });
+
+    await expect(page.getByRole("link", { name: "Tenants" })).toHaveCount(0);
+
+    const response = await page.goto(`${FLORA}/plataforma/tenants`);
+    expect(response?.status()).toBe(404);
+  });
+
+  test("suspender e reativar restaura o status anterior (não promove TRIAL pra ACTIVE)", async ({ page }) => {
+    // Achado real: a primeira versão de "Reativar" sempre setava ACTIVE,
+    // então suspender e reativar um tenant em TRIAL virava ACTIVE de
+    // permanente, perdendo a distinção. Corrigido pra restaurar o status
+    // de antes da suspensão, lido do próprio AuditLog de "tenant_suspended".
+    await page.goto(`${ROOT}/login`);
+    await page.locator("#email").fill("admin@barbershop.local");
+    await page.locator("#password").fill("Admin@123");
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await page.waitForURL((url) => url.hostname === "zeloo.net" && !url.pathname.startsWith("/login"), {
+      timeout: 15_000,
+    });
+
+    await page.goto(`${ROOT}/plataforma/tenants`);
+    await page.waitForTimeout(1_000);
+
+    const diagroRow = page.locator("div.rounded-xl", { hasText: "diagro.zeloo.net" }).first();
+    await diagroRow.getByRole("button", { name: "Suspender" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Suspender" }).click();
+    await page.waitForTimeout(1_500);
+
+    await diagroRow.getByRole("button", { name: "Reativar" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Reativar" }).click();
+    await page.waitForTimeout(1_500);
+
+    const debug = await (await page.request.get(`${DIAGRO}/api/tenant-debug`)).json();
+    expect(debug.tenant.status).toBe("TRIAL");
   });
 });

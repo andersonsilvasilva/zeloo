@@ -1,6 +1,6 @@
 import { TenancyRepository } from "@/modules/tenancy/repositories/tenancy.repository";
 import type { CreateTenantInput } from "@/modules/tenancy/schemas/tenant.schema";
-import type { TenantSummary } from "@/modules/tenancy/types/tenancy.types";
+import type { TenantListItem, TenantSummary } from "@/modules/tenancy/types/tenancy.types";
 
 export class TenantSlugTakenError extends Error {
   constructor() {
@@ -35,6 +35,27 @@ export class TenantService {
     const repo = new TenancyRepository();
     const tenant = await repo.findTenantBySlug(slug);
     return tenant ? this.toSummary(tenant) : null;
+  }
+
+  /** Tela de plataforma (`/plataforma/tenants`) — todos os tenants + proprietário de cada um. */
+  async listAll(): Promise<TenantListItem[]> {
+    const repo = new TenancyRepository();
+    const tenants = await repo.listAllWithOwner();
+    const rootSlug = process.env.ROOT_TENANT_SLUG ?? "";
+    return tenants.map((tenant) => {
+      const owner = tenant.members[0]?.user ?? null;
+      return {
+        id: tenant.id,
+        name: tenant.name,
+        slug: tenant.slug,
+        status: tenant.status,
+        trialEndsAt: tenant.trialEndsAt,
+        createdAt: tenant.createdAt,
+        ownerName: owner?.name ?? null,
+        ownerEmail: owner?.email ?? null,
+        isRoot: tenant.slug === rootSlug,
+      };
+    });
   }
 
   private toSummary(tenant: {

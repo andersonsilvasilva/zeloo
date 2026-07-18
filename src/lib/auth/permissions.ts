@@ -72,6 +72,21 @@ export const PERMISSIONS = {
   audit: {
     view: "audit.view",
   },
+  /**
+   * Ações de nível plataforma (cadastrar tenant novo), não de um negócio
+   * específico. Não existe papel "platform admin" distinto de "tenant
+   * admin" ainda (gap conhecido, ver docs/tenancy/13-acceptance-criteria.md)
+   * — a barreira real hoje é a checagem de tenant raiz feita na própria
+   * página (`app/(app)/plataforma/tenants/page.tsx`), não esta permissão
+   * sozinha. Mesmo assim, ela segue a regra do projeto de nunca checar
+   * `if (role === "ADMIN")` direto: `RolePermission` é global (não por
+   * tenant), então sem o gate de tenant raiz, um ADMIN de QUALQUER tenant
+   * (ex.: dona da Flora) também teria essa permissão marcada — por isso o
+   * gate de página é a defesa real, esta permissão é defesa em profundidade.
+   */
+  platform: {
+    manageTenants: "platform.manageTenants",
+  },
 } as const;
 
 export type PermissionSlug = {
