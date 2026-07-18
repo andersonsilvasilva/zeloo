@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth/auth";
 import { prisma } from "@/lib/prisma";
+import { SETTINGS_KEYS } from "@/modules/settings/schemas/settings.schema";
 
 interface AuditContext {
   userId: string | null;
@@ -49,12 +50,47 @@ const AUDITED_MODELS = new Set([
   "User",
   "Setting",
   "PixCharge",
+  // Fase 10 (spec §49, "role_changed") — atribuição/remoção de papel.
+  "UserRole",
 ]);
 
 const WRITE_OPERATIONS = new Set(["create", "update", "upsert", "delete", "updateMany", "deleteMany"]);
 
 function toClientProperty(model: string): string {
   return model.charAt(0).toLowerCase() + model.slice(1);
+}
+
+/**
+ * Campos que nunca podem ir pro audit log em texto puro, mesmo sendo hash
+ * (senha) ou já mascarados em outro lugar — não confiar duas vezes na mesma
+ * regra. `Setting` é tratado à parte logo abaixo: sensibilidade depende do
+ * `key` da linha, não de um nome de campo fixo (spec §47: "não registrar
+ * senhas, tokens... credenciais de WhatsApp").
+ */
+const SENSITIVE_FIELDS: Partial<Record<string, string[]>> = {
+  User: ["passwordHash"],
+};
+
+const SENSITIVE_SETTING_KEYS = new Set<string>([SETTINGS_KEYS.mercadoPagoAccessToken, SETTINGS_KEYS.mercadoPagoWebhookSecret]);
+
+const REDACTED = "[REDACTED]";
+
+/** Aplica a redação acima num valor (linha única ou array de linhas) antes de virar JSON. */
+function redactSensitive(model: string, value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((v) => redactSensitive(model, v));
+
+  const row = { ...(value as Record<string, unknown>) };
+
+  for (const field of SENSITIVE_FIELDS[model] ?? []) {
+    if (field in row) row[field] = REDACTED;
+  }
+
+  if (model === "Setting" && typeof row.key === "string" && SENSITIVE_SETTING_KEYS.has(row.key)) {
+    row.value = REDACTED;
+  }
+
+  return row;
 }
 
 /** Converte pra um valor serializável em JSON (Decimal/Date viram string/ISO). */
@@ -131,8 +167,8 @@ export const auditExtension = Prisma.defineExtension({
               action: actionLabel(operation),
               entity: model,
               entityId,
-              oldValues: toJsonSafe(oldValues),
-              newValues: operation.startsWith("delete") ? undefined : toJsonSafe(result),
+              oldValues: toJsonSafe(redactSensitive(model, oldValues)),
+              newValues: operation.startsWith("delete") ? undefined : toJsonSafe(redactSensitive(model, result)),
             },
           });
         } catch (error) {

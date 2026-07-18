@@ -13,7 +13,15 @@ export class SettingsRepository {
     await Promise.all(
       entries.map((entry) =>
         this.db.setting.upsert({
-          where: { key: entry.key },
+          // `where: { key }` sozinho não corresponde mais a nenhum unique do
+          // Prisma — `Setting.key` virou @@unique([tenantId, key]) (correção
+          // pós-Fase 16, ver docs/tenancy/02-data-migration.md). O cast é
+          // seguro aqui porque quem resolve o `where` de verdade, em
+          // runtime, é a extensão de isolamento (tenant-extension.ts),
+          // que reescreve isso pra `{ tenantId_key: { tenantId, key } }`
+          // antes da query chegar no Prisma de fato — o tipo gerado não tem
+          // como saber disso estaticamente.
+          where: { key: entry.key } as Prisma.SettingWhereUniqueInput,
           update: { value: entry.value },
           create: { key: entry.key, value: entry.value, type: "string" },
         }),

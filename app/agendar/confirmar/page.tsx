@@ -7,6 +7,12 @@ import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { ConfirmButton } from "@/modules/booking/components/confirm-button";
 import { listPublicProfessionalsAction } from "@/modules/booking/actions/list-public-professionals.action";
 import { listPublicServicesAction } from "@/modules/booking/actions/list-public-services.action";
+import { requireCurrentTenant } from "@/lib/tenancy/current-tenant";
+
+// Mesmo motivo de app/agendar/page.tsx — sem isso, settings ficam "congelados"
+// com os dados do banco usado no build (e agora, com isolamento de tenant da
+// Fase 4, o build nem teria contexto de tenant pra essa leitura funcionar).
+export const dynamic = "force-dynamic";
 
 export default async function ConfirmarPage({
   searchParams,
@@ -22,6 +28,10 @@ export default async function ConfirmarPage({
 }) {
   const { professionalId, serviceIds, clientId, phone, date, time } = searchParams;
   if (!professionalId || !serviceIds || !clientId || !phone || !date || !time) redirect("/agendar/escolher");
+
+  // Fase 14 (spec §67) — resposta controlada pra subdomínio de tenant
+  // inexistente, ver app/login/page.tsx.
+  await requireCurrentTenant();
 
   const [settings, professionals, services] = await Promise.all([
     getGeneralSettingsAction(),

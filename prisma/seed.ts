@@ -48,11 +48,17 @@ async function main() {
   });
 
   const adminRole = await prisma.role.findUniqueOrThrow({ where: { slug: ROLES.ADMIN } });
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: admin.id, roleId: adminRole.id } },
-    update: {},
-    create: { userId: admin.id, roleId: adminRole.id },
+  // upsert() não aceita null na parte tenantId de uma unique compound key
+  // (Prisma não permite lookup por compound unique com campo nulo) — este
+  // seed roda antes de qualquer Tenant existir, então fica sem tenant mesmo
+  // (a associação ao tenant "zeloo" acontece no backfill, não aqui).
+  // findFirst + create manual no lugar de upsert() por causa disso.
+  const existingAdminRole = await prisma.userRole.findFirst({
+    where: { userId: admin.id, roleId: adminRole.id, tenantId: null },
   });
+  if (!existingAdminRole) {
+    await prisma.userRole.create({ data: { userId: admin.id, roleId: adminRole.id } });
+  }
 
   console.log("Seeding default settings...");
   const defaultSettings: Array<[string, string, string]> = [
@@ -62,11 +68,16 @@ async function main() {
     ["barbershop.whatsapp", "", "string"],
   ];
   for (const [key, value, type] of defaultSettings) {
-    await prisma.setting.upsert({
-      where: { key },
-      update: {},
-      create: { key, value, type },
-    });
+    // upsert() por `key` sozinho não serve mais (Setting.key virou
+    // @@unique([tenantId, key]) — correção pós-Fase 16, ver
+    // docs/tenancy/02-data-migration.md); com tenantId null (seed roda
+    // antes de qualquer Tenant existir), o Prisma nem trata "key" como
+    // seletor único sozinho. findFirst + create manual, mesmo padrão do
+    // fix em UserRole logo acima.
+    const existingSetting = await prisma.setting.findFirst({ where: { key, tenantId: null } });
+    if (!existingSetting) {
+      await prisma.setting.create({ data: { key, value, type } });
+    }
   }
 
   console.log("✅ Seed concluído. Login admin: admin@barbershop.local / Admin@123");

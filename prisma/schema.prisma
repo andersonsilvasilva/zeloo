@@ -41,6 +41,7 @@ model User {
   image        String?
 
   roles                UserRole[]
+  tenantMemberships    TenantUser[]
   client               Client?
   professional         Professional?
   auditLogs            AuditLog[]
@@ -110,18 +111,202 @@ model RolePermission {
   @@map("role_permissions")
 }
 
+// tenantId nullable nesta fase (Fase 3, Etapa A — expandir). Fica obrigatório
+// e o @@unique passa a incluir tenantId na Etapa C, depois do backfill —
+// ver docs/tenancy/02-data-migration.md. Até lá, "um papel por usuário
+// globalmente" continua valendo (não por tenant) — é assim que já funciona
+// hoje, então nenhum comportamento muda com essa coluna nullable.
 model UserRole {
-  id     String @id @default(cuid())
-  userId String @map("user_id")
-  roleId String @map("role_id")
+  id       String  @id @default(cuid())
+  userId   String  @map("user_id")
+  roleId   String  @map("role_id")
+  tenantId String? @map("tenant_id")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
 
-  @@unique([userId, roleId])
+  // Corrigido na Fase 14 (achado real na verificação do critério "usuário com
+  // múltiplos tenants opera em um tenant por vez", spec §67): a constraint
+  // original (@@unique([userId, roleId])), de antes da Fase 3 acrescentar
+  // tenantId, nunca foi revisada — impedia o MESMO usuário de ter o MESMO
+  // papel (ex.: ADMIN) em dois tenants diferentes. Ver
+  // docs/tenancy/13-acceptance-criteria.md.
+  @@unique([tenantId, userId, roleId])
+  @@index([tenantId])
   @@map("user_roles")
+}
+
+// ----------------------------------------------------------------------------
+// MULTI-TENANCY (Fase 1 — ver docs/tenancy/01-architecture.md)
+// ----------------------------------------------------------------------------
+// Só tabelas novas nesta fase. Nenhuma tabela acima (User, etc.) foi alterada
+// — tenant_id nas tabelas existentes é trabalho da Fase 3 (migração
+// expandir->migrar->restringir), ainda não iniciada.
+
+model Tenant {
+  id           String       @id @default(cuid())
+  name         String
+  slug         String       @unique
+  status       TenantStatus @default(TRIAL)
+  planId       String?      @map("plan_id")
+  customDomain String?      @map("custom_domain")
+  timezone     String       @default("America/Sao_Paulo")
+  locale       String       @default("pt-BR")
+  settings     Json?
+  trialEndsAt  DateTime?    @map("trial_ends_at")
+
+  members       TenantUser[]
+  subscriptions Subscription[]
+  limits        TenantLimit[]
+  usageRecords  UsageRecord[]
+
+  // Relações inversas das tabelas existentes que ganharam tenant_id
+  // nullable na Fase 3, Etapa A (expandir) — ver docs/tenancy/02-data-migration.md.
+  userRoles               UserRole[]
+  clients                 Client[]
+  professionals           Professional[]
+  services                Service[]
+  appointments            Appointment[]
+  payments                Payment[]
+  pixCharges              PixCharge[]
+  cashbookEntries         CashbookEntry[]
+  cashRegisters           CashRegister[]
+  cashRegisterClosings    CashRegisterClosing[]
+  recurringAccountEntries RecurringAccountEntry[]
+  accountEntries          AccountEntry[]
+  commissionClosings      CommissionClosing[]
+  messageTemplates        MessageTemplate[]
+  messageLogs             MessageLog[]
+  media                   Media[]
+  settingEntries          Setting[] // nome diferente de `settings` (o Json? de branding acima, já existente na Fase 1)
+  auditLogs               AuditLog[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("tenants")
+}
+
+enum TenantStatus {
+  TRIAL
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+// Membership: liga um User (identidade global) a um Tenant. Não tem role_id
+// (diferente do exemplo conceitual do spec) — a atribuição de papel continua
+// via UserRole, que ganha tenant_id na Fase 3 (ver docs/tenancy/01-architecture.md §2).
+model TenantUser {
+  id       String           @id @default(cuid())
+  tenantId String           @map("tenant_id")
+  userId   String           @map("user_id")
+  status   TenantUserStatus @default(ACTIVE)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, userId])
+  @@map("tenant_users")
+}
+
+enum TenantUserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+}
+
+model Plan {
+  id     String  @id @default(cuid())
+  name   String
+  slug   String  @unique
+  active Boolean @default(true)
+
+  features      PlanFeature[]
+  subscriptions Subscription[]
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("plans")
+}
+
+// Uma linha por recurso do plano (ex.: key="appointments_per_month", value="3000",
+// key="pix", value="true") — mesmo padrão key-value já usado por `Setting`.
+model PlanFeature {
+  id     String @id @default(cuid())
+  planId String @map("plan_id")
+  key    String
+  value  String
+
+  plan Plan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, key])
+  @@map("plan_features")
+}
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  tenantId           String             @map("tenant_id")
+  planId             String             @map("plan_id")
+  status             SubscriptionStatus @default(TRIALING)
+  currentPeriodStart DateTime?          @map("current_period_start")
+  currentPeriodEnd   DateTime?          @map("current_period_end")
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  plan   Plan   @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([tenantId])
+  @@map("subscriptions")
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+// Override pontual de um limite de plano pra um tenant específico.
+model TenantLimit {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+  key      String
+  value    String
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, key])
+  @@map("tenant_limits")
+}
+
+// Consumo real medido por tenant/período/métrica — base pro UsageLimitService.
+model UsageRecord {
+  id       String @id @default(cuid())
+  tenantId String @map("tenant_id")
+  key      String
+  period   String // "yyyy-MM"
+  value    Int    @default(0)
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([tenantId, key, period])
+  @@map("usage_records")
 }
 
 // ----------------------------------------------------------------------------
@@ -130,6 +315,7 @@ model UserRole {
 
 model Client {
   id                      String       @id @default(cuid())
+  tenantId                String?      @map("tenant_id")
   userId                  String?      @unique @map("user_id")
   name                    String
   phone                   String?
@@ -143,6 +329,7 @@ model Client {
   lastAppointmentAt       DateTime?    @map("last_appointment_at")
   profileImageId          String?      @map("profile_image_id")
 
+  tenant                Tenant?       @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   user                  User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   preferredProfessional Professional? @relation("PreferredProfessional", fields: [preferredProfessionalId], references: [id], onDelete: SetNull)
   profileImage          Media?        @relation("ClientProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
@@ -156,6 +343,7 @@ model Client {
 
   @@index([status])
   @@index([preferredProfessionalId])
+  @@index([tenantId])
   @@map("clients")
 }
 
@@ -171,6 +359,7 @@ enum ClientStatus {
 
 model Professional {
   id                   String             @id @default(cuid())
+  tenantId             String?            @map("tenant_id")
   userId               String?            @unique @map("user_id")
   fullName             String             @map("full_name")
   professionalName     String             @map("professional_name")
@@ -185,6 +374,7 @@ model Professional {
   profileImageId       String?            @map("profile_image_id")
   workingHours         Json?              @map("working_hours") // { "mon": ["09:00-19:00"], ... }
 
+  tenant             Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   user               User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
   profileImage       Media?                @relation("ProfessionalProfileImage", fields: [profileImageId], references: [id], onDelete: SetNull)
   services           ProfessionalService[]
@@ -196,6 +386,7 @@ model Professional {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([status])
+  @@index([tenantId])
   @@map("professionals")
 }
 
@@ -209,8 +400,12 @@ enum ProfessionalStatus {
 // SERVIÇOS
 // ----------------------------------------------------------------------------
 
+// slug continua @unique global nesta fase (nullable tenantId ainda não
+// permite compor a unique com segurança pra registros sem tenant) — vira
+// @@unique([tenantId, slug]) na Etapa C, depois do backfill.
 model Service {
   id                       String        @id @default(cuid())
+  tenantId                 String?       @map("tenant_id")
   name                     String
   slug                     String        @unique
   shortDescription         String?       @map("short_description")
@@ -222,6 +417,7 @@ model Service {
   advertisingImageId       String?       @map("advertising_image_id")
   defaultMessageTemplateId String?       @map("default_message_template_id")
 
+  tenant                 Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   advertisingImage       Media?                @relation("ServiceAdvertisingImage", fields: [advertisingImageId], references: [id], onDelete: SetNull)
   defaultMessageTemplate MessageTemplate?      @relation(fields: [defaultMessageTemplateId], references: [id], onDelete: SetNull)
   professionals          ProfessionalService[]
@@ -232,6 +428,7 @@ model Service {
 
   @@index([status])
   @@index([category])
+  @@index([tenantId])
   @@map("services")
 }
 
@@ -264,6 +461,7 @@ model ProfessionalService {
 
 model Appointment {
   id              String            @id @default(cuid())
+  tenantId        String?           @map("tenant_id")
   clientId        String            @map("client_id")
   professionalId  String            @map("professional_id")
   appointmentDate DateTime          @map("appointment_date") @db.Date
@@ -273,6 +471,7 @@ model Appointment {
   notes           String?           @db.Text
   createdById     String?           @map("created_by_id")
 
+  tenant       Tenant?              @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   client       Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
   professional Professional         @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   createdBy    User?                @relation("AppointmentCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -287,6 +486,7 @@ model Appointment {
   @@index([clientId])
   @@index([appointmentDate])
   @@index([status])
+  @@index([tenantId])
   @@map("appointments")
 }
 
@@ -323,6 +523,7 @@ model AppointmentService {
 
 model Payment {
   id            String        @id @default(cuid())
+  tenantId      String?       @map("tenant_id")
   appointmentId String        @map("appointment_id")
   amount        Decimal       @db.Decimal(12, 2)
   paymentMethod PaymentMethod @map("payment_method")
@@ -330,6 +531,7 @@ model Payment {
   paidAt        DateTime?     @map("paid_at")
   receivedById  String?       @map("received_by_id")
 
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   appointment   Appointment    @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   receivedBy    User?          @relation("PaymentReceivedBy", fields: [receivedById], references: [id], onDelete: SetNull)
   cashbookEntry CashbookEntry?
@@ -339,6 +541,7 @@ model Payment {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([appointmentId])
+  @@index([tenantId])
   @@map("payments")
 }
 
@@ -364,6 +567,7 @@ enum PaymentStatus {
 // appointmentId.
 model PixCharge {
   id                   String          @id @default(cuid())
+  tenantId             String?         @map("tenant_id")
   appointmentId        String          @map("appointment_id")
   mercadoPagoPaymentId String          @unique @map("mercado_pago_payment_id")
   qrCode               String          @map("qr_code") @db.Text
@@ -374,6 +578,7 @@ model PixCharge {
   paymentId            String?         @unique @map("payment_id")
   createdById          String?         @map("created_by_id")
 
+  tenant      Tenant?     @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
   payment     Payment?    @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   createdBy   User?       @relation("PixChargeCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
@@ -382,6 +587,7 @@ model PixCharge {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([appointmentId])
+  @@index([tenantId])
   @@map("pix_charges")
 }
 
@@ -395,6 +601,7 @@ enum PixChargeStatus {
 
 model CashbookEntry {
   id              String            @id @default(cuid())
+  tenantId        String?           @map("tenant_id")
   type            CashbookEntryType
   description     String
   amount          Decimal           @db.Decimal(12, 2)
@@ -406,6 +613,7 @@ model CashbookEntry {
   transactionDate DateTime          @map("transaction_date")
   notes           String?           @db.Text
 
+  tenant            Tenant?            @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   payment           Payment?           @relation(fields: [paymentId], references: [id], onDelete: SetNull)
   createdBy         User?              @relation("CashbookCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   accountEntry      AccountEntry?
@@ -416,6 +624,7 @@ model CashbookEntry {
 
   @@index([transactionDate])
   @@index([type])
+  @@index([tenantId])
   @@map("cashbook_entries")
 }
 
@@ -426,17 +635,20 @@ enum CashbookEntryType {
 
 model CashRegister {
   id             String             @id @default(cuid())
+  tenantId       String?            @map("tenant_id")
   openedById     String?            @map("opened_by_id")
   openedAt       DateTime           @map("opened_at")
   openingBalance Decimal            @map("opening_balance") @db.Decimal(12, 2)
   status         CashRegisterStatus @default(OPEN)
 
+  tenant   Tenant?              @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   openedBy User?                @relation("CashRegisterOpenedBy", fields: [openedById], references: [id], onDelete: SetNull)
   closing  CashRegisterClosing?
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([tenantId])
   @@map("cash_registers")
 }
 
@@ -447,6 +659,7 @@ enum CashRegisterStatus {
 
 model CashRegisterClosing {
   id              String   @id @default(cuid())
+  tenantId        String?  @map("tenant_id")
   cashRegisterId  String   @unique @map("cash_register_id")
   closedById      String?  @map("closed_by_id")
   closedAt        DateTime @map("closed_at")
@@ -455,11 +668,13 @@ model CashRegisterClosing {
   difference      Decimal  @db.Decimal(12, 2)
   notes           String?  @db.Text
 
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   cashRegister CashRegister @relation(fields: [cashRegisterId], references: [id], onDelete: Cascade)
   closedBy     User?        @relation("CashRegisterClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@index([tenantId])
   @@map("cash_register_closings")
 }
 
@@ -479,6 +694,7 @@ enum AccountEntryStatus {
 // não existe job/cron; @@unique em AccountEntry garante que nunca duplica.
 model RecurringAccountEntry {
   id               String           @id @default(cuid())
+  tenantId         String?          @map("tenant_id")
   direction        AccountDirection
   description      String
   amount           Decimal          @db.Decimal(12, 2)
@@ -489,6 +705,7 @@ model RecurringAccountEntry {
   active           Boolean          @default(true)
   createdById      String?          @map("created_by_id")
 
+  tenant    Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   client    Client?        @relation(fields: [clientId], references: [id], onDelete: SetNull)
   createdBy User?          @relation("RecurringAccountEntryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   entries   AccountEntry[]
@@ -497,6 +714,7 @@ model RecurringAccountEntry {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@index([direction, active])
+  @@index([tenantId])
   @@map("recurring_account_entries")
 }
 
@@ -506,6 +724,7 @@ model RecurringAccountEntry {
 // runtime (status ainda PENDING + dueDate no passado), não armazenado.
 model AccountEntry {
   id               String              @id @default(cuid())
+  tenantId         String?             @map("tenant_id")
   direction        AccountDirection
   description      String
   amount           Decimal             @db.Decimal(12, 2)
@@ -521,6 +740,7 @@ model AccountEntry {
   createdById      String?             @map("created_by_id")
   notes            String?             @db.Text
 
+  tenant         Tenant?                 @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   client         Client?                 @relation(fields: [clientId], references: [id], onDelete: SetNull)
   cashbookEntry  CashbookEntry?          @relation(fields: [cashbookEntryId], references: [id], onDelete: SetNull)
   recurringEntry RecurringAccountEntry?  @relation(fields: [recurringEntryId], references: [id], onDelete: SetNull)
@@ -532,6 +752,7 @@ model AccountEntry {
   @@unique([recurringEntryId, dueDate])
   @@index([direction, status])
   @@index([dueDate])
+  @@index([tenantId])
   @@map("account_entries")
 }
 
@@ -541,6 +762,7 @@ model AccountEntry {
 // edição/estorno depois de fechado (ver README do módulo commissions).
 model CommissionClosing {
   id               String   @id @default(cuid())
+  tenantId         String?  @map("tenant_id")
   professionalId   String   @map("professional_id")
   periodStart      DateTime @map("period_start") @db.Date
   periodEnd        DateTime @map("period_end") @db.Date
@@ -551,12 +773,14 @@ model CommissionClosing {
   closedById       String?  @map("closed_by_id")
   closedAt         DateTime @default(now()) @map("closed_at")
 
+  tenant        Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   professional  Professional   @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   cashbookEntry CashbookEntry? @relation(fields: [cashbookEntryId], references: [id], onDelete: SetNull)
   closedBy      User?          @relation("CommissionClosingClosedBy", fields: [closedById], references: [id], onDelete: SetNull)
 
   @@unique([professionalId, periodStart, periodEnd])
   @@index([professionalId])
+  @@index([tenantId])
   @@map("commission_closings")
 }
 
@@ -566,23 +790,27 @@ model CommissionClosing {
 
 model MessageTemplate {
   id        String         @id @default(cuid())
+  tenantId  String?        @map("tenant_id")
   name      String
   channel   MessageChannel
   content   String         @db.Text
   variables Json? // ex: ["clientName", "appointmentDate"]
   status    ServiceStatus  @default(ACTIVE)
 
+  tenant             Tenant?      @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   logs               MessageLog[]
   defaultForServices Service[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([tenantId])
   @@map("message_templates")
 }
 
 model MessageLog {
   id          String         @id @default(cuid())
+  tenantId    String?        @map("tenant_id")
   clientId    String         @map("client_id")
   templateId  String?        @map("template_id")
   channel     MessageChannel
@@ -591,6 +819,7 @@ model MessageLog {
   sentById    String?        @map("sent_by_id")
   providerRef String?        @map("provider_ref") // id retornado pelo provider externo
 
+  tenant   Tenant?          @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
   template MessageTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   sentBy   User?            @relation("MessageSentBy", fields: [sentById], references: [id], onDelete: SetNull)
@@ -598,6 +827,7 @@ model MessageLog {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([clientId])
+  @@index([tenantId])
   @@map("message_logs")
 }
 
@@ -619,6 +849,7 @@ enum MessageStatus {
 
 model Media {
   id              String    @id @default(cuid())
+  tenantId        String?   @map("tenant_id")
   fileName        String    @map("file_name")
   originalName    String    @map("original_name")
   mimeType        String    @map("mime_type")
@@ -629,6 +860,7 @@ model Media {
   width           Int?
   height          Int?
 
+  tenant             Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   clientsUsing       Client[]       @relation("ClientProfileImage")
   professionalsUsing Professional[] @relation("ProfessionalProfileImage")
   servicesUsing      Service[]      @relation("ServiceAdvertisingImage")
@@ -636,6 +868,7 @@ model Media {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([tenantId])
   @@map("media")
 }
 
@@ -652,20 +885,37 @@ enum MediaType {
 // CONFIGURAÇÕES / AUDITORIA
 // ----------------------------------------------------------------------------
 
+// key continua @unique global nesta fase — vira @@unique([tenantId, key]) na
+// Etapa C. É a tabela mais transversal do sistema (branding, WhatsApp,
+// Mercado Pago, endereço) — ver docs/tenancy/00-audit.md §11.
 model Setting {
-  id    String @id @default(cuid())
-  key   String @unique
-  value String @db.Text
-  type  String @default("string") // string | number | boolean | json
+  id       String  @id @default(cuid())
+  tenantId String? @map("tenant_id")
+  key      String
+  value    String  @db.Text
+  type     String  @default("string") // string | number | boolean | json
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // Corrigido depois da Fase 16 (achado real do usuário: subir logo/favicon
+  // num tenant não-root falhava com "Unique constraint failed on
+  // settings_key_key") — `key` sozinho era global, então qualquer chave que
+  // o tenant zeloo já tivesse (logoMediaId, name, etc.) ficava bloqueada
+  // pra todo outro tenant. Mesma classe de bug do UserRole (Fase 14). Ver
+  // docs/tenancy/02-data-migration.md.
+  @@unique([tenantId, key])
+  @@index([tenantId])
   @@map("settings")
 }
 
+// tenantId nullable de propósito mesmo depois da Etapa C — ações de
+// plataforma (ex.: criação de tenant) nunca terão um tenant associado.
 model AuditLog {
   id        String  @id @default(cuid())
+  tenantId  String? @map("tenant_id")
   userId    String? @map("user_id")
   action    String
   entity    String
@@ -675,11 +925,13 @@ model AuditLog {
   ipAddress String? @map("ip_address")
   userAgent String? @map("user_agent") @db.Text
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([createdAt])
+  @@index([tenantId])
   @@map("audit_logs")
 }

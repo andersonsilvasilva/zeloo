@@ -86,11 +86,14 @@ async function createStaffUser(name: string, email: string, roleSlug: string, pa
   });
 
   const role = await prisma.role.findUniqueOrThrow({ where: { slug: roleSlug } });
-  await prisma.userRole.upsert({
-    where: { userId_roleId: { userId: user.id, roleId: role.id } },
-    update: {},
-    create: { userId: user.id, roleId: role.id },
+  // upsert() não aceita null na parte tenantId de uma unique compound key —
+  // mesmo motivo/correção de prisma/seed.ts.
+  const existingUserRole = await prisma.userRole.findFirst({
+    where: { userId: user.id, roleId: role.id, tenantId: null },
   });
+  if (!existingUserRole) {
+    await prisma.userRole.create({ data: { userId: user.id, roleId: role.id } });
+  }
 
   return user;
 }

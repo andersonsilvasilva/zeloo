@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Scissors } from "lucide-react";
 import { LoginForm } from "@/modules/auth/components/login-form";
 import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general-settings.action";
+import { requireCurrentTenant } from "@/lib/tenancy/current-tenant";
 
 /**
  * Precisa ser dinâmica: como página estática, o Full Route Cache do Next
@@ -16,6 +17,14 @@ import { getGeneralSettingsAction } from "@/modules/settings/actions/get-general
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
+  // Fase 14 (spec §67, "tenant inexistente apresenta resposta controlada"):
+  // sem isso, um subdomínio de tenant inexistente cai 500 aqui — o layout
+  // autenticado (app/(app)/layout.tsx) só faz essa checagem depois do
+  // redirect de "sem sessão" para /login, então nunca protege esta página.
+  // 404 se o hostname não resolve tenant nenhum; redireciona pra
+  // /tenant-indisponivel se suspenso/cancelado.
+  await requireCurrentTenant();
+
   const settings = await getGeneralSettingsAction();
 
   return (

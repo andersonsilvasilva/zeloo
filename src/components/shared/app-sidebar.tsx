@@ -16,6 +16,7 @@ import {
   MessageCircle,
   ShieldCheck,
   Settings,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -35,6 +36,7 @@ const ICONS: Record<string, LucideIcon> = {
   MessageCircle,
   ShieldCheck,
   Settings,
+  Building2,
 };
 
 export interface AppSidebarProps {

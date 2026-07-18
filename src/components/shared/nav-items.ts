@@ -5,6 +5,8 @@ export interface NavItem {
   href: string;
   icon: string;
   permission?: PermissionSlug;
+  /** Só aparece no tenant raiz (ver requireRootTenant()) — item de nível plataforma, não de negócio. */
+  rootOnly?: boolean;
 }
 
 /** Itens do menu principal. `permission` ausente = sempre visível. */
@@ -22,4 +24,11 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Mensagens", href: "/mensagens", icon: "MessageCircle", permission: PERMISSIONS.messages.send },
   { label: "Usuários", href: "/usuarios", icon: "ShieldCheck", permission: PERMISSIONS.users.view },
   { label: "Configurações", href: "/configuracoes", icon: "Settings", permission: PERMISSIONS.settings.update },
+  {
+    label: "Tenants",
+    href: "/plataforma/tenants",
+    icon: "Building2",
+    permission: PERMISSIONS.platform.manageTenants,
+    rootOnly: true,
+  },
 ];

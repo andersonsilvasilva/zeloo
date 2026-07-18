@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/shared/confirm-dialog-provider";
 import { formatCurrency } from "@/lib/utils/format";
 import { ServiceStatusBadge } from "@/modules/services/components/service-status-badge";
 import { ServiceFormDialog } from "@/modules/services/components/service-form-dialog";
@@ -18,12 +19,19 @@ export interface ServiceListProps {
 
 export function ServiceList({ services, options, canUpdate, canDelete }: ServiceListProps) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState<ServiceDetail | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   async function handleDelete(service: ServiceDetail) {
-    if (!confirm(`Excluir o serviço "${service.name}"?`)) return;
+    const ok = await confirm({
+      title: "Excluir serviço",
+      description: `Excluir o serviço "${service.name}"? Essa ação não pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     setPendingId(service.id);
     const result = await deleteServiceAction({ id: service.id });

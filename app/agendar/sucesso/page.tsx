@@ -6,12 +6,22 @@ import { formatDateOnlyBR } from "@/modules/appointments/utils/date-only";
 import { formatInBarbershopTz } from "@/lib/utils/timezone";
 import { BookingHeader } from "@/modules/booking/components/booking-header";
 import { getPublicAppointmentSummaryAction } from "@/modules/booking/actions/get-public-appointment-summary.action";
+import { requireCurrentTenant } from "@/lib/tenancy/current-tenant";
+
+// Mesmo motivo de app/agendar/page.tsx — sem isso, settings ficam "congelados"
+// com os dados do banco usado no build (e agora, com isolamento de tenant da
+// Fase 4, o build nem teria contexto de tenant pra essa leitura funcionar).
+export const dynamic = "force-dynamic";
 
 export default async function SucessoPage({
   searchParams,
 }: {
   searchParams: { appointmentId?: string };
 }) {
+  // Fase 14 (spec §67) — resposta controlada pra subdomínio de tenant
+  // inexistente, ver app/login/page.tsx.
+  await requireCurrentTenant();
+
   const settings = await getGeneralSettingsAction();
 
   if (!searchParams.appointmentId) {

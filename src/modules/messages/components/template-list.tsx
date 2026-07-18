@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useConfirm } from "@/components/shared/confirm-dialog-provider";
 import { MessageChannelBadge } from "@/modules/messages/components/message-channel-badge";
 import { TemplateFormDialog } from "@/modules/messages/components/template-form-dialog";
 import { deleteTemplateAction } from "@/modules/messages/actions/delete-template.action";
@@ -11,12 +12,19 @@ import type { MessageTemplateItem } from "@/modules/messages/types/message.types
 
 export function TemplateList({ templates }: { templates: MessageTemplateItem[] }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [editing, setEditing] = useState<MessageTemplateItem | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
 
   async function handleDelete(template: MessageTemplateItem) {
-    if (!confirm(`Excluir o modelo "${template.name}"?`)) return;
+    const ok = await confirm({
+      title: "Excluir modelo de mensagem",
+      description: `Excluir o modelo "${template.name}"? Essa ação não pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      variant: "danger",
+    });
+    if (!ok) return;
 
     setPendingId(template.id);
     const result = await deleteTemplateAction({ id: template.id });

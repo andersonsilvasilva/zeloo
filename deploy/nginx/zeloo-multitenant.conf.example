@@ -1,0 +1,124 @@
+# Exemplo de configuração Nginx pra multi-tenancy por subdomínio (Fase 12,
+# CLAUDE_CODE_MULTI_TENANT_ZELOO.md §57). NÃO É APLICADO AUTOMATICAMENTE —
+# é um modelo pra revisão manual antes de substituir a config real da VPS.
+#
+# Baseado na config atual de produção (/etc/nginx/sites-available/barbearia,
+# ver memória do projeto "project-vps-zeloo"): Nginx 1.18.0 na VPS
+# 179.197.71.82, reverse proxy pra Node/PM2 em 127.0.0.1:3000, uploads
+# servidos direto do disco (bypass do Next standalone). A diferença
+# principal pra virar multi-tenant é `server_name zeloo.net *.zeloo.net;`
+# em vez de só `zeloo.net www.zeloo.net;`, e o certificado precisa ser
+# wildcard (ver docs/tenancy/10-infrastructure.md §2).
+#
+# `*.zeloo.net` já cobre `www.zeloo.net` — não precisa listar os dois.
+
+# Redireciona HTTP -> HTTPS (todos os hosts, incluindo qualquer subdomínio
+# de tenant e os domínios centrais reservados: app./admin./api.zeloo.net).
+server {
+    listen 80;
+    listen [::]:80;
+    server_name zeloo.net *.zeloo.net;
+
+    # Necessário se algum dia usar validação DNS-01 automatizada com um
+    # plugin que também sirva um desafio HTTP-01 de fallback; sem isso,
+    # pode ser removido.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+upstream zeloo_app {
+    server 127.0.0.1:3000;
+    keepalive 32;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name zeloo.net *.zeloo.net;
+
+    # Certificado wildcard (certbot com plugin DNS, ver
+    # docs/tenancy/10-infrastructure.md §2 — NÃO existe ainda, isto é o
+    # caminho esperado depois de emitido).
+    ssl_certificate     /etc/letsencrypt/live/zeloo.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/zeloo.net/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # --- Headers de segurança ---
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # --- Limites e timeouts ---
+    # Upload de logo/favicon/fotos (ver src/lib/storage/local-storage-provider.ts).
+    client_max_body_size 20m;
+    # Relatórios com agregação pesada (Contas a Pagar/Receber, gráficos do
+    # dashboard) podem levar mais que o padrão de 60s em bases maiores.
+    proxy_connect_timeout 10s;
+    proxy_send_timeout 90s;
+    proxy_read_timeout 90s;
+
+    # --- Arquivos sensíveis nunca servidos, em nenhum host ---
+    location ~ /\.(env|git) {
+        deny all;
+        return 404;
+    }
+    location ~* \.(log|sql|sqlite|bak)$ {
+        deny all;
+        return 404;
+    }
+    location ~ ^/(backups?|db-backups?)/ {
+        deny all;
+        return 404;
+    }
+
+    # --- Health check (app/api/health/route.ts, Fase 12) ---
+    # Verifica processo + conexão com o banco; usado por monitoramento
+    # externo (uptime) e por `pm2`/scripts de deploy pra confirmar que o
+    # restart subiu de verdade antes de liberar tráfego.
+    location = /api/health {
+        proxy_pass http://zeloo_app;
+        proxy_set_header Host $host;
+        access_log off;
+    }
+
+    # --- Uploads: servidos direto do disco, sem passar pelo Node ---
+    # O Next em `output: standalone` só escaneia public/ uma vez no boot do
+    # processo (server.js) — qualquer upload feito DEPOIS do boot fica
+    # invisível pro roteador dele (bug estrutural já documentado, ver
+    # memória "project-vps-zeloo"). Isso é servido direto do disco há muito
+    # tempo em produção; a Fase 7 só aprofundou o caminho dentro da mesma
+    # raiz (public/uploads/tenants/{tenantId}/...), então este alias
+    # continua válido sem alteração — nenhum tenant precisa de path próprio
+    # aqui, o isolamento já está no path do arquivo em si.
+    location /uploads/ {
+        alias /var/www/barbearia/app/public/uploads/;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    # --- Aplicação ---
+    location / {
+        proxy_pass http://zeloo_app;
+        proxy_http_version 1.1;
+
+        # O Host real do navegador (ex.: flora.zeloo.net) chega intacto ao
+        # Node — é dele que middleware.ts resolve o tenant
+        # (src/lib/tenancy/hostname.ts). TRUST_PROXY continua "false" no
+        # .env de produção: não existe CDN nem outro proxy entre o Nginx e
+        # o navegador que pudesse forjar X-Forwarded-Host, então confiar
+        # nesse header só abriria uma superfície de host header injection
+        # sem necessidade nenhuma (spec §60).
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+    }
+}

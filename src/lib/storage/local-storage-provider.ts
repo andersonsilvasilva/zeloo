@@ -3,10 +3,18 @@ import path from "path";
 import sharp from "sharp";
 import { nanoid } from "nanoid";
 import type { StorageProvider, UploadInput, UploadResult } from "@/lib/storage/storage-provider";
+import { getCurrentTenant } from "@/lib/tenancy/current-tenant";
 
 const UPLOAD_ROOT = path.join(process.cwd(), "public", "uploads");
 const ALLOWED_MIME = new Set(["image/png", "image/jpeg", "image/jpg", "image/webp"]);
 const MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
+
+export class StorageMissingTenantContextError extends Error {
+  constructor() {
+    super("Upload exige um tenant no contexto da requisição, mas nenhum foi resolvido.");
+    this.name = "StorageMissingTenantContextError";
+  }
+}
 
 function assertValidImage(input: UploadInput) {
   if (!ALLOWED_MIME.has(input.mimeType)) {
@@ -25,14 +33,21 @@ function randomFileName(originalName: string) {
 /**
  * Implementação local (dev) do StorageProvider.
  * Gera três variantes (thumbnail/medium/large) via Sharp e salva em
- * /public/uploads/<folder>/. Em produção, trocar por S3/R2/Supabase
- * implementando a mesma interface.
+ * /public/uploads/tenants/{tenantId}/<folder>/ (Fase 7 — antes da migração
+ * multi-tenant, era /public/uploads/<folder>/ direto, sem segmentação por
+ * tenant; ver docs/tenancy/05-storage.md). Em produção, trocar por
+ * S3/R2/Supabase implementando a mesma interface — o prefixo por tenant
+ * também deve valer lá (key/objectPath, não pasta física).
  */
 export class LocalStorageProvider implements StorageProvider {
   async upload(input: UploadInput): Promise<UploadResult> {
     assertValidImage(input);
 
-    const folderPath = path.join(UPLOAD_ROOT, input.folder);
+    const tenant = await getCurrentTenant();
+    if (!tenant) throw new StorageMissingTenantContextError();
+
+    const tenantFolder = `tenants/${tenant.id}/${input.folder}`;
+    const folderPath = path.join(UPLOAD_ROOT, "tenants", tenant.id, input.folder);
     await mkdir(folderPath, { recursive: true });
 
     const fileName = randomFileName(input.originalName);
@@ -56,7 +71,7 @@ export class LocalStorageProvider implements StorageProvider {
       largePipeline.toFile(path.join(folderPath, `${baseName}-large.${largeExt}`)),
     ]);
 
-    const storagePath = `${input.folder}/${baseName}-large.${largeExt}`;
+    const storagePath = `${tenantFolder}/${baseName}-large.${largeExt}`;
 
     return {
       fileName,
