@@ -1,6 +1,6 @@
 "use server";
 
-import { requirePermission, requireUserId } from "@/lib/auth/rbac";
+import { requirePermission, requireTenantId, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { updateUserSchema, type UpdateUserInput } from "@/modules/users/schemas/user.schema";
 import {
@@ -13,12 +13,13 @@ import {
 export async function updateUserAction(rawInput: UpdateUserInput) {
   const currentUserId = await requireUserId();
   await requirePermission(PERMISSIONS.users.update);
+  const tenantId = await requireTenantId();
 
   const input = updateUserSchema.parse(rawInput);
 
   try {
     const service = new UserService();
-    const user = await service.update(input, currentUserId);
+    const user = await service.update(input, currentUserId, tenantId);
     return { success: true as const, user };
   } catch (error) {
     if (

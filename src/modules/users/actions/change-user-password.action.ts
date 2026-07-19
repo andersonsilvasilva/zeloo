@@ -1,6 +1,6 @@
 "use server";
 
-import { requirePermission, requireUserId } from "@/lib/auth/rbac";
+import { requirePermission, requireTenantId, requireUserId } from "@/lib/auth/rbac";
 import { PERMISSIONS } from "@/lib/auth/permissions";
 import { changeUserPasswordSchema, type ChangeUserPasswordInput } from "@/modules/users/schemas/user.schema";
 import { UserNotFoundError, UserService } from "@/modules/users/services/user.service";
@@ -8,12 +8,13 @@ import { UserNotFoundError, UserService } from "@/modules/users/services/user.se
 export async function changeUserPasswordAction(rawInput: ChangeUserPasswordInput) {
   await requireUserId();
   await requirePermission(PERMISSIONS.users.update);
+  const tenantId = await requireTenantId();
 
   const input = changeUserPasswordSchema.parse(rawInput);
 
   try {
     const service = new UserService();
-    await service.changePassword(input);
+    await service.changePassword(input, tenantId);
     return { success: true as const };
   } catch (error) {
     if (error instanceof UserNotFoundError) {

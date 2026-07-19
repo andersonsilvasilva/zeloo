@@ -72,3 +72,16 @@ export async function requireUserId(): Promise<string> {
   if (!session?.user?.id) throw new UnauthorizedError();
   return session.user.id;
 }
+
+/**
+ * Retorna o tenantId da sessão atual (já embutido no JWT desde o login,
+ * ver auth.config.ts) ou lança UnauthorizedError. Necessário sempre que um
+ * módulo precisa escopar manualmente por tenant um modelo que não está em
+ * HARD_TENANT_MODELS (ex.: `User`, identidade global de propósito — ver
+ * user.repository.ts).
+ */
+export async function requireTenantId(): Promise<string> {
+  const session = await auth();
+  if (!session?.user?.tenantId) throw new UnauthorizedError();
+  return session.user.tenantId;
+}

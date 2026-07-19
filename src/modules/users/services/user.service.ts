@@ -37,20 +37,20 @@ export class CannotDeleteSelfError extends Error {
 }
 
 export class UserService {
-  async list(filters: ListUsersInput): Promise<UserListItem[]> {
+  async list(filters: ListUsersInput, tenantId: string): Promise<UserListItem[]> {
     const repo = new UserRepository();
-    const users = await repo.list(filters);
+    const users = await repo.list(filters, tenantId);
     return users.map((u) => this.toListItem(u));
   }
 
-  async getById(id: string): Promise<UserListItem> {
+  async getById(id: string, tenantId: string): Promise<UserListItem> {
     const repo = new UserRepository();
-    const user = await repo.findById(id);
+    const user = await repo.findById(id, tenantId);
     if (!user) throw new UserNotFoundError();
     return this.toListItem(user);
   }
 
-  async create(input: CreateUserInput): Promise<UserListItem> {
+  async create(input: CreateUserInput, tenantId: string): Promise<UserListItem> {
     const repo = new UserRepository();
 
     const existing = await repo.findByEmail(input.email);
@@ -67,14 +67,15 @@ export class UserService {
         status: input.status,
       },
       input.roleIds,
+      tenantId,
     );
     return this.toListItem(user);
   }
 
-  async update(input: UpdateUserInput, currentUserId: string): Promise<UserListItem> {
+  async update(input: UpdateUserInput, currentUserId: string, tenantId: string): Promise<UserListItem> {
     const repo = new UserRepository();
 
-    const existing = await repo.findById(input.id);
+    const existing = await repo.findById(input.id, tenantId);
     if (!existing) throw new UserNotFoundError();
 
     if (input.id === currentUserId && input.status !== "ACTIVE") {
@@ -95,13 +96,14 @@ export class UserService {
         status: input.status,
       },
       input.roleIds,
+      tenantId,
     );
     return this.toListItem(user);
   }
 
-  async changePassword(input: ChangeUserPasswordInput): Promise<void> {
+  async changePassword(input: ChangeUserPasswordInput, tenantId: string): Promise<void> {
     const repo = new UserRepository();
-    const existing = await repo.findById(input.id);
+    const existing = await repo.findById(input.id, tenantId);
     if (!existing) throw new UserNotFoundError();
 
     const passwordHash = await hashPassword(input.password);
@@ -109,18 +111,20 @@ export class UserService {
   }
 
   /**
-   * Exclui só a conta de login (User + UserRole). Profissional/Cliente vinculado
-   * e todo o histórico (agendamentos, pagamentos, caixa) continuam intactos —
-   * as FKs relevantes já são `onDelete: SetNull`.
+   * Remove só o vínculo da pessoa com ESTE tenant (membership + papéis
+   * aqui) — nunca a conta `User` global (pode ter login em outro negócio).
+   * Profissional/Cliente vinculado e todo o histórico (agendamentos,
+   * pagamentos, caixa) continuam intactos de qualquer forma — as FKs
+   * relevantes já são `onDelete: SetNull`.
    */
-  async delete(id: string, currentUserId: string): Promise<void> {
+  async delete(id: string, currentUserId: string, tenantId: string): Promise<void> {
     if (id === currentUserId) throw new CannotDeleteSelfError();
 
     const repo = new UserRepository();
-    const existing = await repo.findById(id);
+    const existing = await repo.findById(id, tenantId);
     if (!existing) throw new UserNotFoundError();
 
-    await repo.delete(id);
+    await repo.delete(id, tenantId);
   }
 
   async getFormOptions(): Promise<UserFormOptions> {

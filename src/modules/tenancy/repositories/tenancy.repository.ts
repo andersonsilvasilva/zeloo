@@ -50,6 +50,16 @@ export class TenancyRepository {
     });
   }
 
+  /** Existe vínculo com esse tenant, de qualquer status (não só ACTIVE, diferente de findActiveMembership). */
+  async findMembership(tenantId: string, userId: string) {
+    return this.db.tenantUser.findFirst({ where: { tenantId, userId } });
+  }
+
+  /** Remove só o vínculo com ESTE tenant -- nunca a conta `User` global, que pode ter membership em outro negócio. */
+  async removeMember(tenantId: string, userId: string) {
+    return this.db.tenantUser.deleteMany({ where: { tenantId, userId } });
+  }
+
   /** Login por tenant (Fase 5, spec §29 passo 3) — associação ativa entre usuário e tenant. */
   async findActiveMembership(tenantId: string, userId: string) {
     return this.db.tenantUser.findFirst({
