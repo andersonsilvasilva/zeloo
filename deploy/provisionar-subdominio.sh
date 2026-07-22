@@ -73,12 +73,37 @@ fi
 
 echo "DNS confirmado: $HOSTNAME -> $RESOLVED_IP"
 
-# --- 2. Expande o certificado SSL existente (zeloo.net + www) pra incluir este host ---
+# --- 2. Expande o certificado SSL existente pra incluir este host ---
 # --nginx: também atualiza o server_name do Nginx automaticamente.
-# --expand: adiciona ao certificado já emitido em vez de tentar criar um novo com o mesmo nome.
-echo "--- Emitindo/expandindo certificado SSL (certbot) ---"
-certbot --nginx \
-  -d "$BASE_DOMAIN" -d "www.$BASE_DOMAIN" -d "$HOSTNAME" \
+# --expand: NÃO adiciona ao certificado — SUBSTITUI a lista de domínios pela
+# que for passada em -d. Achado real (incidente de produção, 2026-07-22):
+# rodar isto listando só BASE_DOMAIN + www + o host novo apagou da SAN todo
+# subdomínio de tenant provisionado antes (ex.: cezarios.zeloo.net),
+# derrubando o HTTPS dele em produção sem aviso nenhum. Correção: sempre
+# ler os domínios JÁ no certificado (se ele existir) e somar o host novo,
+# nunca listar um subconjunto fixo.
+CERT_NAME="$BASE_DOMAIN-0001"
+EXISTING_DOMAINS=""
+CERT_PATH="/etc/letsencrypt/live/$CERT_NAME/fullchain.pem"
+if [ -f "$CERT_PATH" ]; then
+  EXISTING_DOMAINS=$(openssl x509 -in "$CERT_PATH" -noout -ext subjectAltName \
+    | tr ',' '\n' | grep -o 'DNS:[^ ]*' | cut -d: -f2)
+fi
+
+ALL_DOMAINS="$BASE_DOMAIN
+www.$BASE_DOMAIN
+$HOSTNAME
+$EXISTING_DOMAINS"
+ALL_DOMAINS=$(echo "$ALL_DOMAINS" | sort -u | grep -v '^$')
+
+CERTBOT_D_ARGS=""
+for d in $ALL_DOMAINS; do
+  CERTBOT_D_ARGS="$CERTBOT_D_ARGS -d $d"
+done
+
+echo "--- Emitindo/expandindo certificado SSL (certbot) --- domínios: $(echo $ALL_DOMAINS | tr '\n' ' ')"
+# shellcheck disable=SC2086
+certbot --nginx $CERTBOT_D_ARGS \
   --expand --non-interactive --agree-tos -m "$CERTBOT_EMAIL"
 
 # --- 3. Confere sintaxe do Nginx antes de recarregar ---
@@ -88,20 +113,41 @@ nginx -t
 echo "--- Recarregando Nginx ---"
 systemctl reload nginx
 
-# --- 4. Smoke test ---
-echo "--- Smoke test ---"
+# --- 4. Smoke test — testa o host novo E todos os domínios que já
+# estavam no certificado, pra pegar na hora qualquer regressão (é assim
+# que o incidente de 2026-07-22 teria sido pego automaticamente: o
+# certbot criou um bloco novo pro host novo em vez de reaproveitar o
+# bloco existente — mesmo com a SAN do certificado correta, o Nginx
+# precisa que o host apareça no server_name de um bloco com o
+# `proxy_pass`, senão cai num bloco stub que só retorna 404).
+echo "--- Smoke test (todos os domínios do certificado) ---"
 sleep 2
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$HOSTNAME/api/health" --max-time 10 || echo "erro")
-echo "GET https://$HOSTNAME/api/health -> $STATUS"
+ANY_FAILED=0
+for d in $ALL_DOMAINS; do
+  STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://$d/api/health" --max-time 10 || echo "erro")
+  echo "GET https://$d/api/health -> $STATUS"
+  if [ "$STATUS" != "200" ]; then
+    ANY_FAILED=1
+  fi
+done
 
-if [ "$STATUS" = "200" ]; then
+if [ "$ANY_FAILED" -eq 0 ]; then
   echo ""
-  echo "✅ $HOSTNAME pronto (SSL + Nginx). Falta só:"
+  echo "✅ $HOSTNAME pronto (SSL + Nginx), e todos os domínios existentes continuam OK. Falta só:"
   echo "   1. Criar o tenant '$SLUG' pela tela /plataforma/tenants (se ainda não existir)."
   echo "   2. Confirmar MULTITENANCY_ENABLED=\"true\" no .env da app e reiniciar o PM2, se ainda não estiver ligado."
 else
   echo ""
-  echo "⚠️  Smoke test não retornou 200 (retornou: $STATUS). Investigar antes de considerar pronto:"
+  echo "⚠️  Pelo menos um domínio não retornou 200. Causas conhecidas:"
+  echo "   - Host novo com 404: o certbot criou um bloco 'server' separado só pra ele (só acontece se o"
+  echo "     host ainda não estava em nenhum server_name antes) — esse bloco novo não tem o proxy_pass"
+  echo "     pro Node. Correção manual: em $NGINX_SITE, adicionar '$HOSTNAME' ao server_name do bloco"
+  echo "     principal (o que já tem 'proxy_pass http://127.0.0.1:3000') e apagar o bloco stub que o"
+  echo "     certbot criou (identifica-se por ter só esse host no server_name e nenhum location/proxy_pass)."
+  echo "     Depois: nginx -t && systemctl reload nginx."
+  echo "   - Host antigo (que já funcionava) com erro: confira 'openssl x509 -in $CERT_PATH -noout -ext"
+  echo "     subjectAltName' pra ver se ele ainda está na lista — se sumiu, rode este script de novo (agora já"
+  echo "     inclui os domínios existentes automaticamente no -d, então deve corrigir sozinho)."
   echo "   - pm2 logs barbearia --lines 30 --nostream"
   echo "   - MULTITENANCY_ENABLED está \"true\" no .env?"
 fi
